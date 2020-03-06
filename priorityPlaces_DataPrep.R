@@ -64,10 +64,10 @@ defineModule(sim, list(
                                "assessed: caribouRSF, specific birds density, species richness, etc",
                                "If a data.frame, feature data must have an 'id' column containing ", 
                                "a unique identifier (i.e. matching 'species' in featuresData), and `name`", 
-                               " character name for each feature."),
+                               " character name for each feature.")),
     createsOutput(objectName = "protectedAreas", objectClass = "RasterLayer", 
                  desc = paste0("Raster of protected areas, it will filter for non-na values (i.e. all but protected areas need",
-                               "to be NA"),
+                               "to be NA")),
     createsOutput(objectName = "importantAreas", objectClass = "RasterLayer", 
                  desc = paste0("Raster of areas that are of importance for one or more species, ",
                                "(i.e. coming from Indigenous knowldge)",
@@ -75,7 +75,6 @@ defineModule(sim, list(
                                "This will be filtered for non-na values (i.e. important are = 1,",
                                "non-important areas need to be 0"),
                  sourceURL = NA)
-    createsOutput(objectName = NA, objectClass = NA, desc = NA)
   )
 ))
 
@@ -88,6 +87,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
     init = {
       
       # 1. Check that birdPrediction and predictedPresenceProbability stack. If not, postProcess one of these
+      browser()
       
       # 2. Get the importantAreas and protectedAreas. If shapefile, convert to raster using predictedPresenceProbability. 
       # If raster, postProcess if it doesn't stack with the other layers: predictedPresenceProbability
@@ -98,9 +98,19 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
     assignStream = {
 
       # 1. Get the names of the birdPrediction and allocate these into streams
-      "https://drive.google.com/file/d/17OiIWC5oJcP2Y0cXMJH_KUWmYJrhR-dn/view?usp=sharing" # ==> streams file
+      speciesWeWant <- Cache(prepInputs, url = "https://drive.google.com/file/d/17OiIWC5oJcP2Y0cXMJH_KUWmYJrhR-dn/view?usp=sharing",
+                             destinationPath = dataPath(sim), fun = "readRDS") # ==> streams file
       speciesWeHaveAll <- drive_ls(as_id(GDriveFolder), recursive = FALSE)
       speciesWeHave <- usefun::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"), howManyCharacters = 4, fromEnd = FALSE)
+      
+      speciesWeWant_Vec <- speciesWeWant$SPEC
+      # Checking which ones we have
+      commonSp2 <- speciesWeWant2_Vec[speciesWeWant2_Vec %in% speciesWeHave]
+      length(commonSp2)
+      length(speciesWeWant2_Vec)
+      (length(commonSp2)/length(speciesWeWant2_Vec))*100
+      
+      commonSp2[commonSp2 %in% commonSp1]
 
     },
     warning(paste("Undefined event type: \'", current(sim)[1, "eventType", with = FALSE],

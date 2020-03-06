@@ -23,10 +23,10 @@ For help writing in R Markdown, see http://rmarkdown.rstudio.com/.
 ```{r module_usage}
 library(SpaDES)
 
-setPaths(modulePath = file.path("C:/Users/tmichele/GitHub/priorityPlaces_DataPrep/priorityPlaces_DataPrep"))
+setPaths(modulePath = file.path(dirname(getwd())))
 getPaths() # shows where the 4 relevant paths are
 
-times <- list(start = 0, end = 10)
+times <- list(start = 0, end = 50)
 
 parameters <- list(
   #.progress = list(type = "text", interval = 1), # for a progress bar
@@ -34,6 +34,25 @@ parameters <- list(
   #module1 = list(param1 = value1, param2 = value2),
   #module2 = list(param1 = value1, param2 = value2)
 )
+
+library(raster)
+library(reproducible)
+
+folder <- file.path(dirname(dirname(getwd())), "outputs/2019/18JUL19/birdPredictionsV3_Fixed")
+
+birdPrediction <- lapply(c(paste0("Year", seq(2001, 2091, 20)), "Year2100"), function(year){
+  fl <- list.files(path = folder, pattern = year, full.names = TRUE)
+  spRas <- lapply(fl, raster::raster)
+    names(spRas) <- unlist(lapply(spRas, function(ras) usefun::substrBoth(usefun::substrBoth(names(ras), howManyCharacters = 12, fromEnd = TRUE), 
+                             howManyCharacters = 4, fromEnd = FALSE)))
+  return(spRas)
+})
+names(birdPrediction) <- c(paste0("Year", seq(2001, 2091, 20)), "Year2100")
+
+folder <- file.path(dirname(dirname(getwd())), "outputs/PAPER") # I don't have anything from 2019 for caribou, and PAPER has, but not the right Years. I should potentially work on fireSense first, re-run simulations and then get this running. 
+
+predictedPresenceProbability <- 
+
 modules <- list("priorityPlaces_DataPrep")
 objects <- list()
 inputs <- list()
