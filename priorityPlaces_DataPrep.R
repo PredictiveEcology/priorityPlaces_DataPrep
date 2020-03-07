@@ -28,6 +28,8 @@ defineModule(sim, list(
                     "Describes the simulation time at which the first save event should occur."),
     defineParameter(".saveInterval", "numeric", NA, NA, NA,
                     "This describes the simulation time interval between save events."),
+    defineParameter("stepInterval", "numeric", 10, NA, NA,
+                    "Interval between predictions. Normally, 20 for birds and caribou. Both birds and caribou NEED to match!"),
     defineParameter(".useCache", "logical", FALSE, NA, NA,
                     paste("Should this entire module be run with caching activated?",
                           "This is generally intended for data-type modules, where stochasticity",
@@ -74,7 +76,21 @@ defineModule(sim, list(
                                " planningUnit id correspond to penalize solutions that chose these",
                                "This will be filtered for non-na values (i.e. important are = 1,",
                                "non-important areas need to be 0"),
-                 sourceURL = NA)
+                 sourceURL = NA),
+    createsOutput(objectName = "speciesStreams", objectClass = "data.table", 
+                  desc = paste0("Table of species and the streams they belong to.", 
+                                "This table will allocate each species to its stream stack (bird diversity).",
+                                " These bird streams + caribou (stream 1) will compose the featuresID")),
+    createsOutput(objectName = "stream1", objectClass = "list", 
+                  desc = paste0("List of species that belong to stream 1 -- higher priority conservation")),
+    createsOutput(objectName = "stream2", objectClass = "list", 
+                  desc = paste0("List of species that belong to stream 2 -- medium-higher priority conservation")),
+    createsOutput(objectName = "stream3", objectClass = "list", 
+                  desc = paste0("List of species that belong to stream 3 -- medium-lower priority conservation")),
+    createsOutput(objectName = "stream4", objectClass = "list", 
+                  desc = paste0("List of species that belong to stream 4 -- lower priority conservation")),
+    createsOutput(objectName = "speciesStreamsList", objectClass = "list", 
+                  desc = paste0("List of the rasters list of stream, from stream1:4"))
   )
 ))
 
@@ -86,32 +102,112 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
     eventType,
     init = {
       
-      # 1. Check that birdPrediction and predictedPresenceProbability stack. If not, postProcess one of these
-      browser()
+      # 1. Check that birdPrediction and predictedPresenceProbability stack. If not, postProcess one of these ( [ FIX ] to be added later) 
+      # TODO 
+      tryCatch({
+        stkBirs <- raster::stack(unlist(sim$birdPrediction))
+        stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
+        stk <- stack(stkBirs, stkBoo)
+        
+      }, error = function(e)
+        {
+        stop("sim$birdPrediction and sim$predictedPresenceProbability do not align. Please debug.")
+      })
       
-      # 2. Get the importantAreas and protectedAreas. If shapefile, convert to raster using predictedPresenceProbability. 
+      # 2. Get the importantAreas and protectedAreas. 
       # If raster, postProcess if it doesn't stack with the other layers: predictedPresenceProbability
-
+      tryCatch({ # importantAreas
+        stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
+        stk <- stack(stkBirs[[1]], stkBoo)
+      }, error = function(e)
+        {
+        message("sim$importantAreas and sim$predictedPresenceProbability do not align. 
+                Will try to postprocess sim$importantAreas.")
+        tryCatch({
+          importantAreas <- postProcess(x = sim$importantAreas, 
+                                        rasterToMatch = sim$predictedPresenceProbability[[1]][[1]])
+          sim$importantAreas <- importantAreas
+        }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
+      })
+      
+      tryCatch({ #protectedAreas
+        stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
+        stk <- stack(stkBirs[[1]], stkBoo)
+      }, error = function(e)
+        {
+        message("sim$protectedAreas and sim$predictedPresenceProbability do not align. 
+                Will try to postprocess sim$protectedAreas.")
+        tryCatch({
+          importantAreas <- postProcess(x = sim$protectedAreas,
+                                        rasterToMatch = sim$predictedPresenceProbability[[1]][[1]])
+          sim$protectedAreas <- protectedAreas
+        }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
+      })
+      
+      sim$speciesStreamsList <- sim$stream1 <- sim$stream2 <- sim$stream3 <- sim$stream4 <- list()
+    
       # schedule future event(s)
-      sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "priorityPlaces_DataPrep", "assignStream")
+      sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "assignStream")
+      sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "prepreStreamStack")
+      sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "calculateStreamDiversity")
     },
     assignStream = {
 
       # 1. Get the names of the birdPrediction and allocate these into streams
       speciesWeWant <- Cache(prepInputs, url = "https://drive.google.com/file/d/17OiIWC5oJcP2Y0cXMJH_KUWmYJrhR-dn/view?usp=sharing",
                              destinationPath = dataPath(sim), fun = "readRDS") # ==> streams file
-      speciesWeHaveAll <- drive_ls(as_id(GDriveFolder), recursive = FALSE)
+      speciesWeHaveAll <- Cache(drive_ls, as_id("1DD2lfSsVEOfHoob3fKaTvqOjwVG0ZByQ"), recursive = FALSE)
       speciesWeHave <- usefun::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"), howManyCharacters = 4, fromEnd = FALSE)
       
       speciesWeWant_Vec <- speciesWeWant$SPEC
-      # Checking which ones we have
-      commonSp2 <- speciesWeWant2_Vec[speciesWeWant2_Vec %in% speciesWeHave]
-      length(commonSp2)
-      length(speciesWeWant2_Vec)
-      (length(commonSp2)/length(speciesWeWant2_Vec))*100
+      commonSp <- speciesWeWant_Vec[speciesWeWant_Vec %in% speciesWeHave]
+      sim$speciesStreams <- speciesWeWant[SPEC %in% commonSp, c("SPEC", "Management Stream")] 
       
-      commonSp2[commonSp2 %in% commonSp1]
+      
+    },
+    prepreStreamStack = {
+      
+      # 2. For the specific year, grab all the birds layers and assign them to a list of streams
+      thisYearsBirds <- sim$birdPrediction[[paste0("Year", time(sim))]]
+      birdSpecies <- names(thisYearsBirds)
+      lapply(birdSpecies, function(BIRD){
+        birdRas <- thisYearsBirds[[BIRD]]
+        stream <- as.numeric(sim$speciesStreams[SPEC == BIRD, "Management Stream"])
+        names(birdRas) <- paste0(BIRD, "_", time(sim))
+        if (stream == 1){
+          sim$stream1[[BIRD]] <- birdRas 
+        } else {
+          if (stream == 2){
+            sim$stream2[[BIRD]] <- birdRas            
+          } else {
+            if (stream == 3){
+              sim$stream3[[BIRD]] <- birdRas
+            } else {
+              if (stream == 4){
+                sim$stream4[[BIRD]] <- birdRas
+              }
+            }
+          }
+        }
+      })
 
+      sim$speciesStreamsList[[paste0("Year", time(sim))]] <- list(stream1 = sim$stream1, stream2 = sim$stream2, 
+                                                            stream3 = sim$stream3, stream4 = sim$stream4)
+      sim$speciesStreamsList[[paste0("Year", time(sim))]] <- sim$speciesStreamsList[[paste0("Year", time(sim))]][lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY
+      
+      # Schedule future events
+      sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "prepreStreamStack")
+    },
+    calculateStreamDiversity = {
+      browser()
+      # 2. For the specific year, calculate stream diversity
+      thisYearsDiversity <- lapply(names(sim$speciesStreamsList[[paste0("Year", time(sim))]]), function(stream){
+        thisYearIndices <- diversityIndices(birdStreamList = sim$speciesStreamsList[[paste0("Year", time(sim))]][[stream]], 
+                                            pathOutput = dataPath(sim), currentTime = time(sim), stream = stream)
+      })
+
+      # Schedule future events
+      sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "calculateStreamDiversity")
     },
     warning(paste("Undefined event type: \'", current(sim)[1, "eventType", with = FALSE],
                   "\' in module \'", current(sim)[1, "moduleName", with = FALSE], "\'", sep = ""))

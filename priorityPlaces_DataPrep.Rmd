@@ -26,7 +26,7 @@ library(SpaDES)
 setPaths(modulePath = file.path(dirname(getwd())))
 getPaths() # shows where the 4 relevant paths are
 
-times <- list(start = 0, end = 50)
+times <- list(start = 2011, end = 2021)
 
 parameters <- list(
   #.progress = list(type = "text", interval = 1), # for a progress bar
@@ -38,30 +38,46 @@ parameters <- list(
 library(raster)
 library(reproducible)
 
-folder <- file.path(dirname(dirname(getwd())), "outputs/2019/18JUL19/birdPredictionsV3_Fixed")
-
-birdPrediction <- lapply(c(paste0("Year", seq(2001, 2091, 20)), "Year2100"), function(year){
-  fl <- list.files(path = folder, pattern = year, full.names = TRUE)
-  spRas <- lapply(fl, raster::raster)
-    names(spRas) <- unlist(lapply(spRas, function(ras) usefun::substrBoth(usefun::substrBoth(names(ras), howManyCharacters = 12, fromEnd = TRUE), 
-                             howManyCharacters = 4, fromEnd = FALSE)))
-  return(spRas)
-})
-names(birdPrediction) <- c(paste0("Year", seq(2001, 2091, 20)), "Year2100")
-
-folder <- file.path(dirname(dirname(getwd())), "outputs/PAPER") # I don't have anything from 2019 for caribou, and PAPER has, but not the right Years. I should potentially work on fireSense first, re-run simulations and then get this running. 
-
-predictedPresenceProbability <- 
+# folder <- file.path(dirname(dirname(getwd())), "outputs/2019/18JUL19/birdPredictionsV3_Fixed")
+# 
+# birdPrediction <- lapply(c(paste0("Year", seq(2001, 2091, 20)), "Year2100"), function(year){
+#   fl <- list.files(path = folder, pattern = year, full.names = TRUE)
+#   spRas <- lapply(fl, raster::raster)
+#     names(spRas) <- unlist(lapply(spRas, function(ras) usefun::substrBoth(usefun::substrBoth(names(ras), howManyCharacters = 12, fromEnd = TRUE), 
+#                              howManyCharacters = 4, fromEnd = FALSE)))
+#   return(spRas)
+# })
+# names(birdPrediction) <- c(paste0("Year", seq(2001, 2091, 20)), "Year2100")
+# 
+# folder <- file.path(dirname(dirname(getwd())), "outputs/PAPER") # I don't have anything from 2019 for caribou, and PAPER has, but not the right Years. I should potentially work on fireSense first, re-run simulations and then get this running. 
+# 
+# predictedPresenceProbability <- 
 
 modules <- list("priorityPlaces_DataPrep")
-objects <- list()
 inputs <- list()
 outputs <- list()
+# Next steps:
+# Make the ones below stack, then re-run the whole thing. Test the indices.
 
-mySim <- simInit(times = times, params = parameters, modules = modules,
+birdPrediction <- list(Year2001 = list(BBWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2001.tif"),
+                                       CAWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2001.tif"),
+                                       BLBW = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2001.tif"),
+                                       CCSP = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2001.tif")),
+                       Year2100 = list(BBWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2100.tif"),
+                                       BLBW = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2100.tif"),
+                                       CAWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2100.tif"),
+                                       CCSP = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2100.tif")))
+predictedPresenceProbability <- list(Year2011 = list(rasterOfAverage = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2001.tif"),
+                                                     rasterOfUncertain = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlainsUncertainty_Year2001.tif")),
+                                     Year2021 = list(rasterOfAverage = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2100.tif"),
+                                                     rasterOfUncertain = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlainsUncertainty_Year2100.tif")))
+
+objects <- list("predictedPresenceProbability" = predictedPresenceProbability,
+                  "birdPrediction" = birdPrediction)
+
+mySim <- simInitAndSpades(times = times, params = parameters, modules = modules,
                  objects = objects)
 
-mySimOut <- spades(mySim)
 ```
 
 # Events
