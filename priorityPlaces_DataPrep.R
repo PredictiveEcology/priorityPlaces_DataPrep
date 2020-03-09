@@ -110,6 +110,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         
       }, error = function(e)
         {
+        browser()
         stop("sim$birdPrediction and sim$predictedPresenceProbability do not align. Please debug.")
       })
       
@@ -162,7 +163,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       commonSp <- speciesWeWant_Vec[speciesWeWant_Vec %in% speciesWeHave]
       sim$speciesStreams <- speciesWeWant[SPEC %in% commonSp, c("SPEC", "Management Stream")] 
       
-      
     },
     prepreStreamStack = {
       
@@ -189,7 +189,12 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           }
         }
       })
-
+      browser()
+      
+      # names(birdPrediction[[time(sim)]])[!names(birdPrediction[[time(sim)]])) %in% names(thisYearsBirds)]
+      
+      # ADD STREAM 5: all other migratory birds we have models for
+      # 
       sim$speciesStreamsList[[paste0("Year", time(sim))]] <- list(stream1 = sim$stream1, stream2 = sim$stream2, 
                                                             stream3 = sim$stream3, stream4 = sim$stream4)
       sim$speciesStreamsList[[paste0("Year", time(sim))]] <- sim$speciesStreamsList[[paste0("Year", time(sim))]][lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY

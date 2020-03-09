@@ -59,7 +59,8 @@ outputs <- list()
 # Next steps:
 # Make the ones below stack, then re-run the whole thing. Test the indices.
 
-birdPrediction <- list(Year2001 = list(BBWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2001.tif"),
+if (pemisc::user() == "Tati"){
+ birdPrediction <- list(Year2001 = list(BBWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2001.tif"),
                                        CAWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2001.tif"),
                                        BLBW = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2001.tif"),
                                        CCSP = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2001.tif")),
@@ -71,6 +72,26 @@ predictedPresenceProbability <- list(Year2011 = list(rasterOfAverage = raster("C
                                                      rasterOfUncertain = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlainsUncertainty_Year2001.tif")),
                                      Year2021 = list(rasterOfAverage = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2100.tif"),
                                                      rasterOfUncertain = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlainsUncertainty_Year2100.tif")))
+} else {
+  if (pemisc::user() == "tmichele"){
+     birdPrediction <- list(Year2001 = list(BBWA = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2001.tif"),
+                                       CAWA = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2001.tif"),
+                                       BLBW = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2001.tif"),
+                                       CCSP = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2001.tif"),
+                                       BCCH = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBCCHYear2001.tif"),
+                                       AMCR = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedAMCRYear2001.tif")),
+                       Year2100 = list(BBWA = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2100.tif"),
+                                       BLBW = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2100.tif"),
+                                       CAWA = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2100.tif"),
+                                       CCSP = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2100.tif"),
+                                       AMCR = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedAMCRYear2001.tif"),
+                                       BCCH = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBCCHYear2001.tif")))
+predictedPresenceProbability <- list(Year2011 = list(rasterOfAverage = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2001.tif"),
+                                                     rasterOfUncertain = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionUncertainTaigaPlains_Year2001.tif")),
+                                     Year2021 = list(rasterOfAverage = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2100.tif"),
+                                                     rasterOfUncertain = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionUncertainTaigaPlains_Year2100.tif")))
+  }
+}
 
 objects <- list("predictedPresenceProbability" = predictedPresenceProbability,
                   "birdPrediction" = birdPrediction)
