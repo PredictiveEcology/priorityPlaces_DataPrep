@@ -19,7 +19,6 @@ defineModule(sim, list(
   documentation = deparse(list("README.txt", "priorityPlaces_DataPrep.Rmd")),
   reqdPkgs = list("googledrive", "tati-micheletti/usefun"),
   parameters = rbind(
-    #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA,
                     "Describes the simulation time at which the first plot event should occur."),
     defineParameter(".plotInterval", "numeric", NA, NA, NA,
