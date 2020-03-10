@@ -26,7 +26,7 @@ library(SpaDES)
 setPaths(modulePath = file.path(dirname(getwd())))
 getPaths() # shows where the 4 relevant paths are
 
-times <- list(start = 2011, end = 2021)
+times <- list(start = 2001, end = 2100)
 
 parameters <- list(
   #.progress = list(type = "text", interval = 1), # for a progress bar
@@ -68,9 +68,9 @@ if (pemisc::user() == "Tati"){
                                        BLBW = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2100.tif"),
                                        CAWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2100.tif"),
                                        CCSP = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2100.tif")))
-predictedPresenceProbability <- list(Year2011 = list(rasterOfAverage = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2001.tif"),
+predictedPresenceProbability <- list(Year2001 = list(rasterOfAverage = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2001.tif"),
                                                      rasterOfUncertain = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlainsUncertainty_Year2001.tif")),
-                                     Year2021 = list(rasterOfAverage = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2100.tif"),
+                                     Year2100 = list(rasterOfAverage = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2100.tif"),
                                                      rasterOfUncertain = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlainsUncertainty_Year2100.tif")))
 } else {
   if (pemisc::user() == "tmichele"){
@@ -86,9 +86,9 @@ predictedPresenceProbability <- list(Year2011 = list(rasterOfAverage = raster("C
                                        CCSP = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2100.tif"),
                                        AMCR = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedAMCRYear2001.tif"),
                                        BCCH = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBCCHYear2001.tif")))
-predictedPresenceProbability <- list(Year2011 = list(rasterOfAverage = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2001.tif"),
+predictedPresenceProbability <- list(Year2001 = list(rasterOfAverage = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2001.tif"),
                                                      rasterOfUncertain = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionUncertainTaigaPlains_Year2001.tif")),
-                                     Year2021 = list(rasterOfAverage = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2100.tif"),
+                                     Year2100 = list(rasterOfAverage = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2100.tif"),
                                                      rasterOfUncertain = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionUncertainTaigaPlains_Year2100.tif")))
   }
 }

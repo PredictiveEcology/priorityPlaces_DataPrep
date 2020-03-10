@@ -17,7 +17,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = deparse(list("README.txt", "priorityPlaces_DataPrep.Rmd")),
-  reqdPkgs = list("googledrive", "tati-micheletti/usefun"),
+  reqdPkgs = list("googledrive", "tati-micheletti/usefun", "crayon"),
   parameters = rbind(
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA,
                     "Describes the simulation time at which the first plot event should occur."),
@@ -110,29 +110,48 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         
       }, error = function(e)
         {
-        browser()
-        stop("sim$birdPrediction and sim$predictedPresenceProbability do not align. Please debug.")
+        message(crayon::red("sim$birdPrediction and sim$predictedPresenceProbability do not align. Will attempt postProcessing caribou layers using bird layers as RTM."))
+        booPrediction <- lapply(names(sim$predictedPresenceProbability), function(year){
+          booPrediction <- lapply(names(sim$predictedPresenceProbability[[year]]), function(TYPE){
+            booPrediction <- Cache(postProcess, x = sim$predictedPresenceProbability[[year]][[TYPE]],
+                                         destinationPath = dataPath(sim),
+                                         rasterToMatch = sim$birdPrediction[[1]][[1]])
+          })
+          names(booPrediction) <- names(sim$predictedPresenceProbability[[year]])
+          return(booPrediction)
+        })
+        names(booPrediction) <- names(sim$predictedPresenceProbability)
+        sim$predictedPresenceProbability <- booPrediction
       })
-      
+      tryCatch({
+        stkBirs <- raster::stack(unlist(sim$birdPrediction))
+        stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
+        stk <- stack(stkBirs, stkBoo)
+      }, error = function(e){
+        stop("postProcessing did not work for your layers. Please debug")
+      })
       # 2. Get the importantAreas and protectedAreas. 
       # If raster, postProcess if it doesn't stack with the other layers: predictedPresenceProbability
+      if (!is.null(sim$importantAreas)){
       tryCatch({ # importantAreas
-        stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
-        stk <- stack(stkBirs[[1]], stkBoo)
-      }, error = function(e)
+          stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
+          stk <- stack(sim$importantAreas, stkBoo)
+        }, error = function(e)
         {
-        message("sim$importantAreas and sim$predictedPresenceProbability do not align. 
-                Will try to postprocess sim$importantAreas.")
-        tryCatch({
-          importantAreas <- postProcess(x = sim$importantAreas, 
-                                        rasterToMatch = sim$predictedPresenceProbability[[1]][[1]])
-          sim$importantAreas <- importantAreas
-        }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
-      })
-      
+          message("sim$importantAreas and sim$predictedPresenceProbability do not align. 
+                  Will try to postprocess sim$importantAreas.")
+          tryCatch({
+            importantAreas <- postProcess(x = sim$importantAreas, 
+                                          rasterToMatch = sim$predictedPresenceProbability[[1]][[1]])
+            sim$importantAreas <- importantAreas
+          }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
+        }
+      )
+      }
+      if (!is.null(sim$protectedAreas)){
       tryCatch({ #protectedAreas
         stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
-        stk <- stack(stkBirs[[1]], stkBoo)
+        stk <- stack(sim$protectedAreas, stkBoo)
       }, error = function(e)
         {
         message("sim$protectedAreas and sim$predictedPresenceProbability do not align. 
@@ -143,6 +162,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           sim$protectedAreas <- protectedAreas
         }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
       })
+      }
       
       sim$speciesStreamsList <- sim$stream1 <- sim$stream2 <- sim$stream3 <- sim$stream4 <- list()
     
@@ -191,7 +211,13 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       })
       browser()
       
-      # names(birdPrediction[[time(sim)]])[!names(birdPrediction[[time(sim)]])) %in% names(thisYearsBirds)]
+      # Check other species we have
+      speciesWeHaveAll <- Cache(drive_ls, as_id("1DD2lfSsVEOfHoob3fKaTvqOjwVG0ZByQ"), recursive = FALSE)
+      speciesWeHave <- usefun::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"), howManyCharacters = 4, fromEnd = FALSE)
+      migratorySpecies <- speciesWeHave[!speciesWeHave %in% names(thisYearsBirds)]
+      # names(birdPrediction[[paste0("Year", time(sim))]])[!names(birdPrediction[[paste0("Year", time(sim))]]) %in% names(thisYearsBirds)]
+      
+      
       
       # ADD STREAM 5: all other migratory birds we have models for
       # 
