@@ -1,9 +1,3 @@
-## Everything in this file gets sourced during `simInit()`,
-## and all functions and objects are put into the `simList`.
-## To use objects, use `sim$xxx` (they are globally available to all modules).
-## Functions can be used without `sim$` as they are namespaced to the module,
-## just like functions in R packages.
-## If exact location is required, functions will be: `sim$<moduleName>$FunctionName`.
 defineModule(sim, list(
   name = "priorityPlaces_DataPrep",
   description = paste0("This module has been designed to prepare data to create a raster of priority places for",
@@ -17,7 +11,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = deparse(list("README.txt", "priorityPlaces_DataPrep.Rmd")),
-  reqdPkgs = list("googledrive", "tati-micheletti/usefun", "crayon"),
+  reqdPkgs = list("googledrive", "tati-micheletti/usefun", "crayon", "vegan", "raster"),
   parameters = rbind(
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA,
                     "Describes the simulation time at which the first plot event should occur."),
@@ -32,7 +26,13 @@ defineModule(sim, list(
     defineParameter(".useCache", "logical", FALSE, NA, NA,
                     paste("Should this entire module be run with caching activated?",
                           "This is generally intended for data-type modules, where stochasticity",
-                          "and time are not relevant"))
+                          "and time are not relevant")),
+    defineParameter("diversityIndex", "character", "shannon", NA, NA,
+                    paste0("Can also use 'simpson' (which is the inverted version, i.e. more diversity, higher ",
+                           "value), but not both. The function diversityIndices can, however, deal with both of them.")),
+    defineParameter("normalizeRasters", "logical", TRUE, NA, NA,
+                    "Should the rasters of each stream be normalized?")
+    
   ),
   inputObjects = bind_rows(
     expectsInput(objectName = "birdPrediction", objectClass = "list", 
@@ -47,7 +47,10 @@ defineModule(sim, list(
                                "(i.e. coming from Indigenous knowldge)",
                                " planningUnit id correspond to penalize solutions that chose these",
                                "This will be filtered for non-na values (i.e. important are = 1,",
-                               "non-important areas need to be 0"), sourceURL = NA)
+                               "non-important areas need to be 0"), sourceURL = NA),
+    expectsInput(objectName = "predictedPresenceProbability", objectClass = "list", 
+                 desc =  paste0("List of rasters per year, indicating habitat quality ",
+                                "index for presence of Caribous"), sourceURL = NA),
   ),
   outputObjects = bind_rows(
     createsOutput(objectName = "planningUnit", objectClass = "RasterLayer | data.frame", 
@@ -60,7 +63,7 @@ defineModule(sim, list(
                                " and it must also have columns wit xloc, yloc, and one that",
                                " indicates the cost of each planning unit ('cost'). If the first, the module", 
                                " will convert it to data.frame with the necessary adjustments")),
-    createsOutput(objectName = "featuresID", objectClass = "rasterStack | data.frame", 
+    createsOutput(objectName = "featuresID", objectClass = "rasterStack", 
                  desc = paste0("This is the rasterStack or relative data.frame of the features to be ",
                                "assessed: caribouRSF, specific birds density, species richness, etc",
                                "If a data.frame, feature data must have an 'id' column containing ", 
@@ -88,8 +91,12 @@ defineModule(sim, list(
                   desc = paste0("List of species that belong to stream 3 -- medium-lower priority conservation")),
     createsOutput(objectName = "stream4", objectClass = "list", 
                   desc = paste0("List of species that belong to stream 4 -- lower priority conservation")),
+    createsOutput(objectName = "stream5", objectClass = "list", 
+                  desc = paste0("List of species that belong to stream 5 -- all others (i.e. migratory birds)")),
     createsOutput(objectName = "speciesStreamsList", objectClass = "list", 
-                  desc = paste0("List of the rasters list of stream, from stream1:4"))
+                  desc = paste0("List of the rasters list of stream, from stream2:5")),
+    createsOutput(objectName = "latestYearsDiversity", objectClass = "list", 
+                  desc = paste0("List of the diversity rasters for each stream2:5"))
   )
 ))
 
@@ -164,12 +171,21 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       })
       }
       
-      sim$speciesStreamsList <- sim$stream1 <- sim$stream2 <- sim$stream3 <- sim$stream4 <- list()
+      # Create the list placeholders
+      sim$speciesStreamsList <- sim$stream1 <- sim$stream2 <- sim$stream3 <- sim$stream4 <- sim$stream5 <- list()
+      
+      # Assertion:
+      if (length(P(sim)$diversityIndex) > 1)
+        stop("You have to provide at least one index to be calculated: 'shannon', 'simpson' (i.e. simpson is the inverted version)")
+      
     
       # schedule future event(s)
       sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "assignStream")
       sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "prepreStreamStack")
       sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "calculateStreamDiversity")
+      sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "addMissingStreams")
+      if (P(sim)$normalizeRasters)
+        sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "normalizingFeatures")
     },
     assignStream = {
 
@@ -192,6 +208,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       lapply(birdSpecies, function(BIRD){
         birdRas <- thisYearsBirds[[BIRD]]
         stream <- as.numeric(sim$speciesStreams[SPEC == BIRD, "Management Stream"])
+        if (is.na(stream))
+          stream <- 5
         names(birdRas) <- paste0(BIRD, "_", time(sim))
         if (stream == 1){
           sim$stream1[[BIRD]] <- birdRas 
@@ -204,12 +222,13 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
             } else {
               if (stream == 4){
                 sim$stream4[[BIRD]] <- birdRas
+              } else { # If the bird is not in the list, we put to stream5, migratory birds by default 
+                sim$stream5[[BIRD]] <- birdRas 
               }
             }
           }
         }
       })
-      browser()
       
       # Check other species we have
       speciesWeHaveAll <- Cache(drive_ls, as_id("1DD2lfSsVEOfHoob3fKaTvqOjwVG0ZByQ"), recursive = FALSE)
@@ -217,27 +236,64 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       migratorySpecies <- speciesWeHave[!speciesWeHave %in% names(thisYearsBirds)]
       # names(birdPrediction[[paste0("Year", time(sim))]])[!names(birdPrediction[[paste0("Year", time(sim))]]) %in% names(thisYearsBirds)]
       
-      
-      
-      # ADD STREAM 5: all other migratory birds we have models for
-      # 
       sim$speciesStreamsList[[paste0("Year", time(sim))]] <- list(stream1 = sim$stream1, stream2 = sim$stream2, 
-                                                            stream3 = sim$stream3, stream4 = sim$stream4)
+                                                            stream3 = sim$stream3, stream4 = sim$stream4, stream5 = sim$stream5)
       sim$speciesStreamsList[[paste0("Year", time(sim))]] <- sim$speciesStreamsList[[paste0("Year", time(sim))]][lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY
       
       # Schedule future events
       sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "prepreStreamStack")
     },
     calculateStreamDiversity = {
-      browser()
       # 2. For the specific year, calculate stream diversity
-      thisYearsDiversity <- lapply(names(sim$speciesStreamsList[[paste0("Year", time(sim))]]), function(stream){
+      sim$latestYearsDiversity <- lapply(names(sim$speciesStreamsList[[paste0("Year", time(sim))]]), function(stream){
         thisYearIndices <- diversityIndices(birdStreamList = sim$speciesStreamsList[[paste0("Year", time(sim))]][[stream]], 
                                             pathOutput = dataPath(sim), currentTime = time(sim), stream = stream)
+        return(thisYearIndices)
       })
-
+      names(sim$latestYearsDiversity) <- names(sim$speciesStreamsList[[paste0("Year", time(sim))]])
       # Schedule future events
       sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "calculateStreamDiversity")
+    },
+    addMissingStreams = {
+      # 3. For the specific year, add the missing stream 1 (i.e. caribou)
+      thisYearCaribou <- sim$predictedPresenceProbability[[paste0("Year", time(sim))]]
+      caribouRSFuncertain <- grepMulti(names(thisYearCaribou), patterns = "Uncertain")
+      caribouRSFname <- setdiff(names(thisYearCaribou), caribouRSFuncertain)
+      sim$stream1 <- list(stream1 = thisYearCaribou[[caribouRSFname]])
+      sim$latestYearsDiversity <- c(sim$stream1, sim$latestYearsDiversity)
+      missingStreams <- setdiff(paste0("stream", 1:5), names(sim$latestYearsDiversity))
+      if (!is.null(missingStreams)){
+        missingRas <- lapply(missingStreams, function(mssStr){
+          zeroedRas <- raster::setValues(sim$stream1[[1]], 0)
+          ras <- Cache(postProcess, x = zeroedRas, # Its is zeroed so it doesn't add anything to the features, but can be passed
+                             rasterToMatch =  sim$stream1[[1]], 
+                             maskWithRTM = TRUE, 
+                       userTags = c("module:priorityPlaces_DataPrep", 
+                                   "zeroedStreams", 
+                                   paste0("missingStream:", mssStr))) # Caribou is used as template here
+          names(ras) <- mssStr
+          return(ras)
+        })
+        names(missingRas) <- missingStreams
+      }
+      # Here I expect to have all stream layers, from 1 to 5. If there is one I don't have originally, it should be here as zero
+      stk <- raster::stack(c(sim$latestYearsDiversity, missingRas))
+      matched <- match(paste0("stream", 1:5), names(stk))
+      sim$featuresID <- raster::subset(stk, matched)
+
+      # Schedule future events
+      sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "addMissingStreams")
+    },
+    normalizingFeatures = {
+      # 4. Normalizing rasters
+      normalized <- lapply(names(sim$featuresID), function(streamLay){
+        lay <- rescale(sim$featuresID[[streamLay]])
+        return(lay)
+      })
+      names(normalized) <- names(sim$featuresID)
+      sim$featuresID <- normalized
+      # Schedule future events
+      sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "normalizingFeatures")
     },
     warning(paste("Undefined event type: \'", current(sim)[1, "eventType", with = FALSE],
                   "\' in module \'", current(sim)[1, "moduleName", with = FALSE], "\'", sep = ""))
@@ -245,83 +301,12 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
   return(invisible(sim))
 }
 
-## event functions
-#   - keep event functions short and clean, modularize by calling subroutines from section below.
-
-### template initialization
-Init <- function(sim) {
-  # # ! ----- EDIT BELOW ----- ! #
-
-  # ! ----- STOP EDITING ----- ! #
-
-  return(invisible(sim))
-}
-
-### template for save events
-Save <- function(sim) {
-  # ! ----- EDIT BELOW ----- ! #
-  # do stuff for this event
-  sim <- saveFiles(sim)
-
-  # ! ----- STOP EDITING ----- ! #
-  return(invisible(sim))
-}
-
-### template for plot events
-plotFun <- function(sim) {
-  # ! ----- EDIT BELOW ----- ! #
-  # do stuff for this event
-  #Plot(sim$object)
-
-  # ! ----- STOP EDITING ----- ! #
-  return(invisible(sim))
-}
-
-### template for your event1
-Event1 <- function(sim) {
-  # ! ----- EDIT BELOW ----- ! #
-  # THE NEXT TWO LINES ARE FOR DUMMY UNIT TESTS; CHANGE OR DELETE THEM.
-  # sim$event1Test1 <- " this is test for event 1. " # for dummy unit test
-  # sim$event1Test2 <- 999 # for dummy unit test
-
-  # ! ----- STOP EDITING ----- ! #
-  return(invisible(sim))
-}
-
-### template for your event2
-Event2 <- function(sim) {
-  # ! ----- EDIT BELOW ----- ! #
-  # THE NEXT TWO LINES ARE FOR DUMMY UNIT TESTS; CHANGE OR DELETE THEM.
-  # sim$event2Test1 <- " this is test for event 2. " # for dummy unit test
-  # sim$event2Test2 <- 777  # for dummy unit test
-
-  # ! ----- STOP EDITING ----- ! #
-  return(invisible(sim))
-}
-
 .inputObjects <- function(sim) {
-  # Any code written here will be run during the simInit for the purpose of creating
-  # any objects required by this module and identified in the inputObjects element of defineModule.
-  # This is useful if there is something required before simulation to produce the module
-  # object dependencies, including such things as downloading default datasets, e.g.,
-  # downloadData("LCC2005", modulePath(sim)).
-  # Nothing should be created here that does not create a named object in inputObjects.
-  # Any other initiation procedures should be put in "init" eventType of the doEvent function.
-  # Note: the module developer can check if an object is 'suppliedElsewhere' to
-  # selectively skip unnecessary steps because the user has provided those inputObjects in the
-  # simInit call, or another module will supply or has supplied it. e.g.,
-  # if (!suppliedElsewhere('defaultColor', sim)) {
-  #   sim$map <- Cache(prepInputs, extractURL('map')) # download, extract, load file from url in sourceURL
-  # }
-
-  #cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
+ 
+  cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
-
-  # ! ----- EDIT BELOW ----- ! #
-
-  # ! ----- STOP EDITING ----- ! #
+  
   return(invisible(sim))
 }
 
-### add additional events as needed by copy/pasting from above
