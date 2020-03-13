@@ -30,7 +30,7 @@ times <- list(start = 2001, end = 2100)
 
 parameters <- list(
   priorityPlaces_DataPrep = list(
-    "stepInterval" = 99,
+    "stepInterval" = 99
     )
 )
 
@@ -38,60 +38,31 @@ parameters <- list(
 library(raster)
 library(reproducible)
 
-# folder <- file.path(dirname(dirname(getwd())), "outputs/2019/18JUL19/birdPredictionsV3_Fixed")
-# 
-# birdPrediction <- lapply(c(paste0("Year", seq(2001, 2091, 20)), "Year2100"), function(year){
-#   fl <- list.files(path = folder, pattern = year, full.names = TRUE)
-#   spRas <- lapply(fl, raster::raster)
-#     names(spRas) <- unlist(lapply(spRas, function(ras) usefun::substrBoth(usefun::substrBoth(names(ras), howManyCharacters = 12, fromEnd = TRUE), 
-#                              howManyCharacters = 4, fromEnd = FALSE)))
-#   return(spRas)
-# })
-# names(birdPrediction) <- c(paste0("Year", seq(2001, 2091, 20)), "Year2100")
-# 
-# folder <- file.path(dirname(dirname(getwd())), "outputs/PAPER") # I don't have anything from 2019 for caribou, and PAPER has, but not the right Years. I should potentially work on fireSense first, re-run simulations and then get this running. 
-# 
-# predictedPresenceProbability <- 
-
 modules <- list("priorityPlaces_DataPrep")
 inputs <- list()
 outputs <- list()
-# Next steps:
-# Make the ones below stack, then re-run the whole thing. Test the indices.
 
-if (pemisc::user() == "Tati"){
- birdPrediction <- list(Year2001 = list(BBWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2001.tif"),
-                                       CAWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2001.tif"),
-                                       BLBW = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2001.tif"),
-                                       CCSP = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2001.tif")),
-                       Year2100 = list(BBWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2100.tif"),
-                                       BLBW = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2100.tif"),
-                                       CAWA = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2100.tif"),
-                                       CCSP = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2100.tif")))
-predictedPresenceProbability <- list(Year2001 = list(rasterOfAverage = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2001.tif"),
-                                                     rasterOfUncertain = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlainsUncertainty_Year2001.tif")),
-                                     Year2100 = list(rasterOfAverage = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2100.tif"),
-                                                     rasterOfUncertain = raster("C:/Users/Tati/Documents/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlainsUncertainty_Year2100.tif")))
-} else {
-  if (pemisc::user() == "tmichele"){
-     birdPrediction <- list(Year2001 = list(BBWA = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2001.tif"),
-                                       CAWA = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2001.tif"),
-                                       BLBW = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2001.tif"),
-                                       CCSP = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2001.tif"),
-                                       BCCH = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBCCHYear2001.tif"),
-                                       AMCR = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedAMCRYear2001.tif")),
-                       Year2100 = list(BBWA = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBBWAYear2100.tif"),
-                                       BLBW = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBLBWYear2100.tif"),
-                                       CAWA = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedCAWAYear2100.tif"),
-                                       CCSP = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedCCSPYear2100.tif"),
-                                       AMCR = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedAMCRYear2001.tif"),
-                                       BCCH = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/CSpredictedBCCHYear2001.tif")))
-predictedPresenceProbability <- list(Year2001 = list(rasterOfAverage = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2001.tif"),
-                                                     rasterOfUncertain = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionUncertainTaigaPlains_Year2001.tif")),
-                                     Year2100 = list(rasterOfAverage = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionTaigaPlains_Year2100.tif"),
-                                                     rasterOfUncertain = raster("C:/Users/tmichele/GitHub/NWT/TMP/TEST/relativeSelectionUncertainTaigaPlains_Year2100.tif")))
-  }
-}
+birdPrediction <- list(Year2001 = list(BBWA = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1X8O89Yem6WjcwCTPvj9OJowXLCsJMAAO"),
+                                       CAWA = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=18jjCr8bKN6ftX8M_EdrRA5y8RB8KPuZI"),
+                                       BLBW = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=13ElhFF1q5NvdQvVb3in8jdP5mWTJLXNq"),
+                                       CCSP = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1Is7SvDVka-dq6KBzs_YMM81wOl0pfvhA"),
+                                       BCCH = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1MVzhzEDh0UAYD3_94ZlkDUQkgDOKk1yL"),
+                                       AMCR = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=13YZ-gKXtDf3w6900BR4f2jxndcUOj3w9")),
+                       Year2100 = list(BBWA = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1WcfPMD7j_-Nfad7koz-rfm3S0-IP2Jsr"),
+                                       BLBW = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1tBjED-qKtqPFVWAcLKW2_GLF6SSWbhsQ"),
+                                       CAWA = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1OGGroI187s5yP17G91qZ2zLEhQe9YSTe"),
+                                       CCSP = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1VQOBUHARR6HWGMHshJ-9iQ9l2tsVEa4I"),
+                                       AMCR = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1-RSMtl5HhejBGO1RrTFRAp-wNjYP_BpI"),
+                                       BCCH = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1fPBkC99KYI9vxOVIDUiceerIYxFusfhY"))
+)
+predictedPresenceProbability <- list(Year2001 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath, 
+                                                                                  url ="https://drive.google.com/open?id=1Dhk7fYHysrnb6kXCA4KlcFp73ohAtMJ2"),
+                                                     rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath, 
+                                                                                    url ="https://drive.google.com/open?id=1NZ9T2DwrbKn_bvDmiBnZ1mowBR-lqJZk")),
+                                     Year2100 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath, 
+                                                                                  url ="https://drive.google.com/open?id=1ONJM8ITMP6A9_WTU2K2yIWZ0VFJWXTyg"),
+                                                     rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath, 
+                                                                                    url ="https://drive.google.com/open?id=1Y_Ij-I44sq3QvjTLukEDKlUuH6HDXgGx")))
 
 objects <- list("predictedPresenceProbability" = predictedPresenceProbability,
                   "birdPrediction" = birdPrediction)
