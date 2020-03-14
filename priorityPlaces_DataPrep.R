@@ -32,70 +32,70 @@ defineModule(sim, list(
                            "value), but not both. The function diversityIndices can, however, deal with both of them.")),
     defineParameter("normalizeRasters", "logical", TRUE, NA, NA,
                     "Should the rasters of each stream be normalized?")
-    
+
   ),
   inputObjects = bind_rows(
-    expectsInput(objectName = "birdPrediction", objectClass = "list", 
+    expectsInput(objectName = "birdPrediction", objectClass = "list",
                  desc = "List per year of the bird species predicted rasters", sourceURL = NA),
-    expectsInput(objectName = "predictedPresenceProbability", objectClass = "list", 
+    expectsInput(objectName = "predictedPresenceProbability", objectClass = "list",
                  desc = "List of rasters per year, indicating the probability of presence of Caribous", sourceURL = NA),
-    expectsInput(objectName = "protectedAreas", objectClass = "RasterLayer | shapefile", 
+    expectsInput(objectName = "protectedAreas", objectClass = "RasterLayer | shapefile",
                   desc = paste0("Raster of protected areas, it will filter for non-na values (i.e. all but protected areas need",
                                 "to be NA"), sourceURL = NA),
-    expectsInput(objectName = "importantAreas", objectClass = "RasterLayer | shapefile", 
+    expectsInput(objectName = "importantAreas", objectClass = "RasterLayer | shapefile",
                  desc = paste0("Raster of areas that are of importance for one or more species, ",
                                "(i.e. coming from Indigenous knowldge)",
                                " planningUnit id correspond to penalize solutions that chose these",
                                "This will be filtered for non-na values (i.e. important are = 1,",
                                "non-important areas need to be 0"), sourceURL = NA),
-    expectsInput(objectName = "predictedPresenceProbability", objectClass = "list", 
+    expectsInput(objectName = "predictedPresenceProbability", objectClass = "list",
                  desc =  paste0("List of rasters per year, indicating habitat quality ",
-                                "index for presence of Caribous"), sourceURL = NA),
+                                "index for presence of Caribous"), sourceURL = NA)
   ),
   outputObjects = bind_rows(
-    createsOutput(objectName = "planningUnit", objectClass = "RasterLayer | data.frame", 
-                 desc = paste0("Planning unit is the spatial area (study area) that should be", 
+    createsOutput(objectName = "planningUnit", objectClass = "RasterLayer | data.frame",
+                 desc = paste0("Planning unit is the spatial area (study area) that should be",
                                "either a raster or data.frame. If the last, calculations",
                                " are faster. If the last, each row in the planning unit table must",
                                " correspond to a different planning unit. The table must also have ",
                                " an 'id' column to provide a unique integer identifier for each",
                                " planning unit (i.e. pixelID -- used as `pu` in featuresData. see below),",
                                " and it must also have columns wit xloc, yloc, and one that",
-                               " indicates the cost of each planning unit ('cost'). If the first, the module", 
+                               " indicates the cost of each planning unit ('cost'). If the first, the module",
                                " will convert it to data.frame with the necessary adjustments")),
-    createsOutput(objectName = "featuresID", objectClass = "rasterStack", 
+    createsOutput(objectName = "featuresID", objectClass = "rasterStack",
                  desc = paste0("This is the rasterStack or relative data.frame of the features to be ",
                                "assessed: caribouRSF, specific birds density, species richness, etc",
-                               "If a data.frame, feature data must have an 'id' column containing ", 
-                               "a unique identifier (i.e. matching 'species' in featuresData), and `name`", 
+                               "If a data.frame, feature data must have an 'id' column containing ",
+                               "a unique identifier (i.e. matching 'species' in featuresData), and `name`",
                                " character name for each feature.")),
-    createsOutput(objectName = "protectedAreas", objectClass = "RasterLayer", 
+    createsOutput(objectName = "protectedAreas", objectClass = "RasterLayer",
                  desc = paste0("Raster of protected areas, it will filter for non-na values (i.e. all but protected areas need",
                                "to be NA")),
-    createsOutput(objectName = "importantAreas", objectClass = "RasterLayer", 
+    createsOutput(objectName = "importantAreas", objectClass = "RasterLayer",
                  desc = paste0("Raster of areas that are of importance for one or more species, ",
                                "(i.e. coming from Indigenous knowldge)",
                                " planningUnit id correspond to penalize solutions that chose these",
                                "This will be filtered for non-na values (i.e. important are = 1,",
                                "non-important areas need to be 0"),
                  sourceURL = NA),
-    createsOutput(objectName = "speciesStreams", objectClass = "data.table", 
-                  desc = paste0("Table of species and the streams they belong to.", 
+    createsOutput(objectName = "speciesStreams", objectClass = "data.table",
+                  desc = paste0("Table of species and the streams they belong to.",
                                 "This table will allocate each species to its stream stack (bird diversity).",
                                 " These bird streams + caribou (stream 1) will compose the featuresID")),
-    createsOutput(objectName = "stream1", objectClass = "list", 
+    createsOutput(objectName = "stream1", objectClass = "list",
                   desc = paste0("List of species that belong to stream 1 -- higher priority conservation")),
-    createsOutput(objectName = "stream2", objectClass = "list", 
+    createsOutput(objectName = "stream2", objectClass = "list",
                   desc = paste0("List of species that belong to stream 2 -- medium-higher priority conservation")),
-    createsOutput(objectName = "stream3", objectClass = "list", 
+    createsOutput(objectName = "stream3", objectClass = "list",
                   desc = paste0("List of species that belong to stream 3 -- medium-lower priority conservation")),
-    createsOutput(objectName = "stream4", objectClass = "list", 
+    createsOutput(objectName = "stream4", objectClass = "list",
                   desc = paste0("List of species that belong to stream 4 -- lower priority conservation")),
-    createsOutput(objectName = "stream5", objectClass = "list", 
+    createsOutput(objectName = "stream5", objectClass = "list",
                   desc = paste0("List of species that belong to stream 5 -- all others (i.e. migratory birds)")),
-    createsOutput(objectName = "speciesStreamsList", objectClass = "list", 
+    createsOutput(objectName = "speciesStreamsList", objectClass = "list",
                   desc = paste0("List of the rasters list of stream, from stream2:5")),
-    createsOutput(objectName = "latestYearsDiversity", objectClass = "list", 
+    createsOutput(objectName = "latestYearsDiversity", objectClass = "list",
                   desc = paste0("List of the diversity rasters for each stream2:5"))
   )
 ))
@@ -107,14 +107,14 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
   switch(
     eventType,
     init = {
-      
-      # 1. Check that birdPrediction and predictedPresenceProbability stack. If not, postProcess one of these ( [ FIX ] to be added later) 
-      # TODO 
+
+      # 1. Check that birdPrediction and predictedPresenceProbability stack. If not, postProcess one of these ( [ FIX ] to be added later)
+      # TODO
       tryCatch({
         stkBirs <- raster::stack(unlist(sim$birdPrediction))
         stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
         stk <- stack(stkBirs, stkBoo)
-        
+
       }, error = function(e)
         {
         message(crayon::red("sim$birdPrediction and sim$predictedPresenceProbability do not align. Will attempt postProcessing caribou layers using bird layers as RTM."))
@@ -137,7 +137,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       }, error = function(e){
         stop("postProcessing did not work for your layers. Please debug")
       })
-      # 2. Get the importantAreas and protectedAreas. 
+      # 2. Get the importantAreas and protectedAreas.
       # If raster, postProcess if it doesn't stack with the other layers: predictedPresenceProbability
       if (!is.null(sim$importantAreas)){
       tryCatch({ # importantAreas
@@ -145,10 +145,10 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           stk <- stack(sim$importantAreas, stkBoo)
         }, error = function(e)
         {
-          message("sim$importantAreas and sim$predictedPresenceProbability do not align. 
+          message("sim$importantAreas and sim$predictedPresenceProbability do not align.
                   Will try to postprocess sim$importantAreas.")
           tryCatch({
-            importantAreas <- postProcess(x = sim$importantAreas, 
+            importantAreas <- postProcess(x = sim$importantAreas,
                                           rasterToMatch = sim$predictedPresenceProbability[[1]][[1]])
             sim$importantAreas <- importantAreas
           }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
@@ -161,7 +161,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         stk <- stack(sim$protectedAreas, stkBoo)
       }, error = function(e)
         {
-        message("sim$protectedAreas and sim$predictedPresenceProbability do not align. 
+        message("sim$protectedAreas and sim$predictedPresenceProbability do not align.
                 Will try to postprocess sim$protectedAreas.")
         tryCatch({
           importantAreas <- postProcess(x = sim$protectedAreas,
@@ -170,15 +170,16 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
       })
       }
-      
+
       # Create the list placeholders
-      sim$speciesStreamsList <- sim$stream1 <- sim$stream2 <- sim$stream3 <- sim$stream4 <- sim$stream5 <- list()
-      
+      sim$speciesStreamsList <- sim$stream1 <- sim$stream2 <- sim$stream3 <-
+        sim$stream4 <- sim$stream5 <- sim$featuresID <- list()
+
       # Assertion:
       if (length(P(sim)$diversityIndex) > 1)
         stop("You have to provide at least one index to be calculated: 'shannon', 'simpson' (i.e. simpson is the inverted version)")
-      
-    
+
+
       # schedule future event(s)
       sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "assignStream")
       sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "prepreStreamStack")
@@ -194,14 +195,14 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
                              destinationPath = dataPath(sim), fun = "readRDS") # ==> streams file
       speciesWeHaveAll <- Cache(drive_ls, as_id("1DD2lfSsVEOfHoob3fKaTvqOjwVG0ZByQ"), recursive = FALSE)
       speciesWeHave <- usefun::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"), howManyCharacters = 4, fromEnd = FALSE)
-      
+
       speciesWeWant_Vec <- speciesWeWant$SPEC
       commonSp <- speciesWeWant_Vec[speciesWeWant_Vec %in% speciesWeHave]
-      sim$speciesStreams <- speciesWeWant[SPEC %in% commonSp, c("SPEC", "Management Stream")] 
-      
+      sim$speciesStreams <- speciesWeWant[SPEC %in% commonSp, c("SPEC", "Management Stream")]
+
     },
     prepreStreamStack = {
-      
+
       # 2. For the specific year, grab all the birds layers and assign them to a list of streams
       thisYearsBirds <- sim$birdPrediction[[paste0("Year", time(sim))]]
       birdSpecies <- names(thisYearsBirds)
@@ -212,41 +213,53 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           stream <- 5
         names(birdRas) <- paste0(BIRD, "_", time(sim))
         if (stream == 1){
-          sim$stream1[[BIRD]] <- birdRas 
+          birdRas <- list(birdRas)
+          names(birdRas) <- BIRD
+          sim$stream1[[paste0("Year", time(sim))]] <- c(sim$stream1[[paste0("Year", time(sim))]], birdRas)
         } else {
           if (stream == 2){
-            sim$stream2[[BIRD]] <- birdRas            
+            birdRas <- list(birdRas)
+            names(birdRas) <- BIRD
+            sim$stream2[[paste0("Year", time(sim))]] <- c(sim$stream2[[paste0("Year", time(sim))]], birdRas)
           } else {
             if (stream == 3){
-              sim$stream3[[BIRD]] <- birdRas
+              birdRas <- list(birdRas)
+              names(birdRas) <- BIRD
+              sim$stream3[[paste0("Year", time(sim))]] <- c(sim$stream3[[paste0("Year", time(sim))]], birdRas)
             } else {
               if (stream == 4){
-                sim$stream4[[BIRD]] <- birdRas
-              } else { # If the bird is not in the list, we put to stream5, migratory birds by default 
-                sim$stream5[[BIRD]] <- birdRas 
+                birdRas <- list(birdRas)
+                names(birdRas) <- BIRD
+                sim$stream4[[paste0("Year", time(sim))]] <- c(sim$stream4[[paste0("Year", time(sim))]], birdRas)
+              } else { # If the bird is not in the list, we put to stream5, migratory birds by default
+                birdRas <- list(birdRas)
+                names(birdRas) <- BIRD
+                sim$stream5[[paste0("Year", time(sim))]] <- c(sim$stream5[[paste0("Year", time(sim))]], birdRas)
               }
             }
           }
         }
       })
-      
       # Check other species we have
       speciesWeHaveAll <- Cache(drive_ls, as_id("1DD2lfSsVEOfHoob3fKaTvqOjwVG0ZByQ"), recursive = FALSE)
       speciesWeHave <- usefun::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"), howManyCharacters = 4, fromEnd = FALSE)
       migratorySpecies <- speciesWeHave[!speciesWeHave %in% names(thisYearsBirds)]
       # names(birdPrediction[[paste0("Year", time(sim))]])[!names(birdPrediction[[paste0("Year", time(sim))]]) %in% names(thisYearsBirds)]
-      
-      sim$speciesStreamsList[[paste0("Year", time(sim))]] <- list(stream1 = sim$stream1, stream2 = sim$stream2, 
-                                                            stream3 = sim$stream3, stream4 = sim$stream4, stream5 = sim$stream5)
+
+      sim$speciesStreamsList[[paste0("Year", time(sim))]] <- list(stream1 = sim$stream1[[paste0("Year", time(sim))]],
+                                                                  stream2 = sim$stream2[[paste0("Year", time(sim))]],
+                                                                  stream3 = sim$stream3[[paste0("Year", time(sim))]],
+                                                                  stream4 = sim$stream4[[paste0("Year", time(sim))]],
+                                                                  stream5 = sim$stream5[[paste0("Year", time(sim))]])
       sim$speciesStreamsList[[paste0("Year", time(sim))]] <- sim$speciesStreamsList[[paste0("Year", time(sim))]][lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY
-      
+
       # Schedule future events
       sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "prepreStreamStack")
     },
     calculateStreamDiversity = {
       # 2. For the specific year, calculate stream diversity
       sim$latestYearsDiversity <- lapply(names(sim$speciesStreamsList[[paste0("Year", time(sim))]]), function(stream){
-        thisYearIndices <- diversityIndices(birdStreamList = sim$speciesStreamsList[[paste0("Year", time(sim))]][[stream]], 
+        thisYearIndices <- diversityIndices(birdStreamList = sim$speciesStreamsList[[paste0("Year", time(sim))]][[stream]],
                                             pathOutput = dataPath(sim), currentTime = time(sim), stream = stream)
         return(thisYearIndices)
       })
@@ -258,18 +271,21 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       # 3. For the specific year, add the missing stream 1 (i.e. caribou)
       thisYearCaribou <- sim$predictedPresenceProbability[[paste0("Year", time(sim))]]
       caribouRSFuncertain <- grepMulti(names(thisYearCaribou), patterns = "Uncertain")
-      caribouRSFname <- setdiff(names(thisYearCaribou), caribouRSFuncertain)
-      sim$stream1 <- list(stream1 = thisYearCaribou[[caribouRSFname]])
-      sim$latestYearsDiversity <- c(sim$stream1, sim$latestYearsDiversity)
+      caribouRSFname <- setdiff(names(thisYearCaribou), caribouRSFuncertain) #TODO Test with adding caribou to a stream that has one bird already
+      nms <- names(sim$stream1[[paste0("Year", time(sim))]])
+      sim$stream1[[paste0("Year", time(sim))]] <- c(sim$stream1[[paste0("Year", time(sim))]],
+                                                    thisYearCaribou[[caribouRSFname]])
+      names(sim$stream1[[paste0("Year", time(sim))]]) <- c(nms, "stream1")
+      sim$latestYearsDiversity <- c(sim$stream1[[paste0("Year", time(sim))]], sim$latestYearsDiversity)
       missingStreams <- setdiff(paste0("stream", 1:5), names(sim$latestYearsDiversity))
       if (!is.null(missingStreams)){
         missingRas <- lapply(missingStreams, function(mssStr){
-          zeroedRas <- raster::setValues(sim$stream1[[1]], 0)
+          zeroedRas <- raster::setValues(sim$stream1[[paste0("Year", time(sim))]][[1]], 0)
           ras <- Cache(postProcess, x = zeroedRas, # Its is zeroed so it doesn't add anything to the features, but can be passed
-                             rasterToMatch =  sim$stream1[[1]], 
-                             maskWithRTM = TRUE, 
-                       userTags = c("module:priorityPlaces_DataPrep", 
-                                   "zeroedStreams", 
+                             rasterToMatch =  sim$stream1[[paste0("Year", time(sim))]][[1]],
+                             maskWithRTM = TRUE,
+                       userTags = c("module:priorityPlaces_DataPrep",
+                                   "zeroedStreams",
                                    paste0("missingStream:", mssStr))) # Caribou is used as template here
           names(ras) <- mssStr
           return(ras)
@@ -279,19 +295,20 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       # Here I expect to have all stream layers, from 1 to 5. If there is one I don't have originally, it should be here as zero
       stk <- raster::stack(c(sim$latestYearsDiversity, missingRas))
       matched <- match(paste0("stream", 1:5), names(stk))
-      sim$featuresID <- raster::subset(stk, matched)
+      sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
 
       # Schedule future events
       sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "addMissingStreams")
     },
     normalizingFeatures = {
       # 4. Normalizing rasters
-      normalized <- lapply(names(sim$featuresID), function(streamLay){
-        lay <- rescale(sim$featuresID[[streamLay]])
+      normalized <- lapply(names(sim$featuresID[[paste0("Year", time(sim))]]), function(streamLay){
+        lay <- rescale(sim$featuresID[[paste0("Year", time(sim))]][[streamLay]])
+        names(lay) <- streamLay
         return(lay)
       })
-      names(normalized) <- names(sim$featuresID)
-      sim$featuresID <- normalized
+      names(normalized) <- names(sim$featuresID[[paste0("Year", time(sim))]])
+      sim$featuresID[[paste0("Year", time(sim))]] <- normalized
       # Schedule future events
       sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "normalizingFeatures")
     },
@@ -302,11 +319,57 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
 }
 
 .inputObjects <- function(sim) {
- 
+if (!suppliedElsewhere("birdPrediction", sim)){
+  message(crayon::red("No bird layers provided. Using DUMMY data"))
+  sim$birdPrediction <- list(Year2001 = list(BBWA = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=1X8O89Yem6WjcwCTPvj9OJowXLCsJMAAO"),
+                                         CAWA = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=18jjCr8bKN6ftX8M_EdrRA5y8RB8KPuZI"),
+                                         BLBW = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=13ElhFF1q5NvdQvVb3in8jdP5mWTJLXNq"),
+                                         CCSP = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=1Is7SvDVka-dq6KBzs_YMM81wOl0pfvhA"),
+                                         BCCH = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=1MVzhzEDh0UAYD3_94ZlkDUQkgDOKk1yL"),
+                                         AMCR = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=13YZ-gKXtDf3w6900BR4f2jxndcUOj3w9")),
+                         Year2100 = list(BBWA = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=1WcfPMD7j_-Nfad7koz-rfm3S0-IP2Jsr"),
+                                         BLBW = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=1tBjED-qKtqPFVWAcLKW2_GLF6SSWbhsQ"),
+                                         CAWA = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=1OGGroI187s5yP17G91qZ2zLEhQe9YSTe"),
+                                         CCSP = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=1VQOBUHARR6HWGMHshJ-9iQ9l2tsVEa4I"),
+                                         AMCR = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=1-RSMtl5HhejBGO1RrTFRAp-wNjYP_BpI"),
+                                         BCCH = prepInputs(destinationPath = Paths$inputPath,
+                                                           url = "https://drive.google.com/open?id=1fPBkC99KYI9vxOVIDUiceerIYxFusfhY"))
+  )
+
+  if (!suppliedElsewhere("predictedPresenceProbability", sim)){
+    message(crayon::red("No caribou layers provided. Using DUMMY data"))
+  sim$predictedPresenceProbability <- list(Year2001 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath,
+                                                                                    url ="https://drive.google.com/open?id=1Dhk7fYHysrnb6kXCA4KlcFp73ohAtMJ2"),
+                                                       rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath,
+                                                                                      url ="https://drive.google.com/open?id=1NZ9T2DwrbKn_bvDmiBnZ1mowBR-lqJZk")),
+                                       Year2100 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath,
+                                                                                    url ="https://drive.google.com/open?id=1ONJM8ITMP6A9_WTU2K2yIWZ0VFJWXTyg"),
+                                                       rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath,
+                                                                                      url ="https://drive.google.com/open?id=1Y_Ij-I44sq3QvjTLukEDKlUuH6HDXgGx")))
+  }
+  if (!suppliedElsewhere("planningUnit", sim)){
+    message(crayon::red("No planningUnit layer provided. Basing the planning unit on the caribou layer (the whole are, excl. water bodies)"))
+    booBasedPU <- sim$predictedPresenceProbability[[1]][[1]]
+    booBasedPU[!is.na(booBasedPU)] <- 0
+    sim$planningUnit <- booBasedPU
+  }
+
+}
   cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
-  
+
   return(invisible(sim))
 }
 

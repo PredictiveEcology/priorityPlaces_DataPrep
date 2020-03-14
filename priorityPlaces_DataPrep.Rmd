@@ -23,9 +23,10 @@ For help writing in R Markdown, see http://rmarkdown.rstudio.com/.
 ```{r module_usage}
 library(SpaDES)
 
-setPaths(modulePath = file.path(dirname(getwd())))
+setPaths(modulePath = file.path(dirname(getwd())),
+         outputPath = checkPath(file.path(dirname(getwd()), "TMP_priorityPlacesTest"), create = TRUE))
 getPaths() # shows where the 4 relevant paths are
-
+options(reproducible.showSimilar = TRUE)
 times <- list(start = 2001, end = 2100)
 
 parameters <- list(
@@ -42,30 +43,7 @@ modules <- list("priorityPlaces_DataPrep")
 inputs <- list()
 outputs <- list()
 
-birdPrediction <- list(Year2001 = list(BBWA = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1X8O89Yem6WjcwCTPvj9OJowXLCsJMAAO"),
-                                       CAWA = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=18jjCr8bKN6ftX8M_EdrRA5y8RB8KPuZI"),
-                                       BLBW = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=13ElhFF1q5NvdQvVb3in8jdP5mWTJLXNq"),
-                                       CCSP = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1Is7SvDVka-dq6KBzs_YMM81wOl0pfvhA"),
-                                       BCCH = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1MVzhzEDh0UAYD3_94ZlkDUQkgDOKk1yL"),
-                                       AMCR = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=13YZ-gKXtDf3w6900BR4f2jxndcUOj3w9")),
-                       Year2100 = list(BBWA = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1WcfPMD7j_-Nfad7koz-rfm3S0-IP2Jsr"),
-                                       BLBW = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1tBjED-qKtqPFVWAcLKW2_GLF6SSWbhsQ"),
-                                       CAWA = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1OGGroI187s5yP17G91qZ2zLEhQe9YSTe"),
-                                       CCSP = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1VQOBUHARR6HWGMHshJ-9iQ9l2tsVEa4I"),
-                                       AMCR = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1-RSMtl5HhejBGO1RrTFRAp-wNjYP_BpI"),
-                                       BCCH = prepInputs(destinationPath = Paths$inputPath, url = "https://drive.google.com/open?id=1fPBkC99KYI9vxOVIDUiceerIYxFusfhY"))
-)
-predictedPresenceProbability <- list(Year2001 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath, 
-                                                                                  url ="https://drive.google.com/open?id=1Dhk7fYHysrnb6kXCA4KlcFp73ohAtMJ2"),
-                                                     rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath, 
-                                                                                    url ="https://drive.google.com/open?id=1NZ9T2DwrbKn_bvDmiBnZ1mowBR-lqJZk")),
-                                     Year2100 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath, 
-                                                                                  url ="https://drive.google.com/open?id=1ONJM8ITMP6A9_WTU2K2yIWZ0VFJWXTyg"),
-                                                     rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath, 
-                                                                                    url ="https://drive.google.com/open?id=1Y_Ij-I44sq3QvjTLukEDKlUuH6HDXgGx")))
-
-objects <- list("predictedPresenceProbability" = predictedPresenceProbability,
-                  "birdPrediction" = birdPrediction)
+objects <- list()
 
 mySim <- simInitAndSpades(times = times, params = parameters, modules = modules,
                  objects = objects)
