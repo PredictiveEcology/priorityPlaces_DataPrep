@@ -280,8 +280,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         missingRas <- lapply(missingStreams, function(mssStr){
           zeroedRas <- raster::setValues(sim$stream1[[paste0("Year", time(sim))]][[1]], 0)
           ras <- Cache(postProcess, x = zeroedRas, # Its is zeroed so it doesn't add anything to the features, but can be passed
-                             rasterToMatch =  sim$stream1[[paste0("Year", time(sim))]][[1]],
-                             maskWithRTM = TRUE,
+                       rasterToMatch =  sim$stream1[[paste0("Year", time(sim))]][[1]],
+                       maskWithRTM = TRUE, filename2 = NULL,
                        userTags = c("module:priorityPlaces_DataPrep",
                                    "zeroedStreams",
                                    paste0("missingStream:", mssStr))) # Caribou is used as template here
