@@ -3,6 +3,8 @@ title: "priorityPlaces_DataPrep"
 author: ""
 date: "04 March 2020"
 output: pdf_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Overview
@@ -21,10 +23,16 @@ For help writing in R Markdown, see http://rmarkdown.rstudio.com/.
 # Usage
 
 ```{r module_usage}
-library(SpaDES)
+library(gurobi)
+library(raster)
+library(reproducible)
+library(SpaDES.core)
+library(SpaDES.tools)
+
+scratchDir <- file.path("/mnt/scratch")
 
 setPaths(modulePath = file.path(dirname(getwd())),
-         outputPath = checkPath(file.path(dirname(getwd()), "TMP_priorityPlacesTest"), create = TRUE))
+         outputPath = checkPath(file.path(scratchDir, "TMP_priorityPlacesTest"), create = TRUE))
 getPaths() # shows where the 4 relevant paths are
 options(reproducible.showSimilar = TRUE)
 times <- list(start = 2001, end = 2100)
@@ -35,19 +43,13 @@ parameters <- list(
     )
 )
 
-
-library(raster)
-library(reproducible)
-
 modules <- list("priorityPlaces_DataPrep")
 inputs <- list()
 outputs <- list()
 
 objects <- list()
 
-mySim <- simInitAndSpades(times = times, params = parameters, modules = modules,
-                 objects = objects)
-
+mySim <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
 ```
 
 # Events
