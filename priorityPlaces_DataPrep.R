@@ -32,16 +32,10 @@ defineModule(sim, list(
                            "value), but not both. The function diversityIndices can, however, deal with both of them.")),
     defineParameter("normalizeRasters", "logical", TRUE, NA, NA,
                     "Should the rasters of each stream be normalized?")
-
   ),
   inputObjects = bind_rows(
     expectsInput(objectName = "birdPrediction", objectClass = "list",
                  desc = "List per year of the bird species predicted rasters", sourceURL = NA),
-    expectsInput(objectName = "predictedPresenceProbability", objectClass = "list",
-                 desc = "List of rasters per year, indicating the probability of presence of Caribous", sourceURL = NA),
-    expectsInput(objectName = "protectedAreas", objectClass = "RasterLayer | shapefile",
-                  desc = paste0("Raster of protected areas, it will filter for non-na values (i.e. all but protected areas need",
-                                "to be NA"), sourceURL = NA),
     expectsInput(objectName = "importantAreas", objectClass = "RasterLayer | shapefile",
                  desc = paste0("Raster of areas that are of importance for one or more species, ",
                                "(i.e. coming from Indigenous knowldge)",
@@ -50,39 +44,46 @@ defineModule(sim, list(
                                "non-important areas need to be 0"), sourceURL = NA),
     expectsInput(objectName = "predictedPresenceProbability", objectClass = "list",
                  desc =  paste0("List of rasters per year, indicating habitat quality ",
-                                "index for presence of Caribous"), sourceURL = NA)
+                                "index for presence of Caribous"), sourceURL = NA),
+    expectsInput(objectName = "protectedAreas", objectClass = "RasterLayer | shapefile",
+                 desc = paste0("Raster of protected areas, it will filter for non-na values",
+                               " (i.e. all but protected areas need to be NA"), sourceURL = NA),
   ),
   outputObjects = bind_rows(
-    createsOutput(objectName = "planningUnit", objectClass = "RasterLayer | data.frame",
-                 desc = paste0("Planning unit is the spatial area (study area) that should be",
-                               "either a raster or data.frame. If the last, calculations",
-                               " are faster. If the last, each row in the planning unit table must",
-                               " correspond to a different planning unit. The table must also have ",
-                               " an 'id' column to provide a unique integer identifier for each",
-                               " planning unit (i.e. pixelID -- used as `pu` in featuresData. see below),",
-                               " and it must also have columns wit xloc, yloc, and one that",
-                               " indicates the cost of each planning unit ('cost'). If the first, the module",
-                               " will convert it to data.frame with the necessary adjustments")),
     createsOutput(objectName = "featuresID", objectClass = "rasterStack",
                  desc = paste0("This is the rasterStack or relative data.frame of the features to be ",
                                "assessed: caribouRSF, specific birds density, species richness, etc",
                                "If a data.frame, feature data must have an 'id' column containing ",
                                "a unique identifier (i.e. matching 'species' in featuresData), and `name`",
                                " character name for each feature.")),
+    createsOutput(objectName = "importantAreas", objectClass = "RasterLayer",
+                  desc = paste0("Raster of areas that are of importance for one or more species, ",
+                                "(i.e. coming from Indigenous knowldge)",
+                                " planningUnit id correspond to penalize solutions that chose these",
+                                "This will be filtered for non-na values (i.e. important are = 1,",
+                                "non-important areas need to be 0"),
+                  sourceURL = NA),
+    createsOutput(objectName = "planningUnit", objectClass = "RasterLayer | data.frame",
+                  desc = paste0("Planning unit is the spatial area (study area) that should be",
+                                "either a raster or data.frame. If the last, calculations",
+                                " are faster. If the last, each row in the planning unit table must",
+                                " correspond to a different planning unit. The table must also have ",
+                                " an 'id' column to provide a unique integer identifier for each",
+                                " planning unit (i.e. pixelID -- used as `pu` in featuresData. see below),",
+                                " and it must also have columns wit xloc, yloc, and one that",
+                                " indicates the cost of each planning unit ('cost'). If the first, the module",
+                                " will convert it to data.frame with the necessary adjustments")),
+    createsOutput(objectName = "latestYearsDiversity", objectClass = "list",
+                  desc = paste0("List of the diversity rasters for each stream2:5")),
     createsOutput(objectName = "protectedAreas", objectClass = "RasterLayer",
                  desc = paste0("Raster of protected areas, it will filter for non-na values (i.e. all but protected areas need",
                                "to be NA")),
-    createsOutput(objectName = "importantAreas", objectClass = "RasterLayer",
-                 desc = paste0("Raster of areas that are of importance for one or more species, ",
-                               "(i.e. coming from Indigenous knowldge)",
-                               " planningUnit id correspond to penalize solutions that chose these",
-                               "This will be filtered for non-na values (i.e. important are = 1,",
-                               "non-important areas need to be 0"),
-                 sourceURL = NA),
     createsOutput(objectName = "speciesStreams", objectClass = "data.table",
                   desc = paste0("Table of species and the streams they belong to.",
                                 "This table will allocate each species to its stream stack (bird diversity).",
                                 " These bird streams + caribou (stream 1) will compose the featuresID")),
+    createsOutput(objectName = "speciesStreamsList", objectClass = "list",
+                  desc = paste0("List of the rasters list of stream, from stream2:5")),
     createsOutput(objectName = "stream1", objectClass = "list",
                   desc = paste0("List of species that belong to stream 1 -- higher priority conservation")),
     createsOutput(objectName = "stream2", objectClass = "list",
@@ -92,11 +93,7 @@ defineModule(sim, list(
     createsOutput(objectName = "stream4", objectClass = "list",
                   desc = paste0("List of species that belong to stream 4 -- lower priority conservation")),
     createsOutput(objectName = "stream5", objectClass = "list",
-                  desc = paste0("List of species that belong to stream 5 -- all others (i.e. migratory birds)")),
-    createsOutput(objectName = "speciesStreamsList", objectClass = "list",
-                  desc = paste0("List of the rasters list of stream, from stream2:5")),
-    createsOutput(objectName = "latestYearsDiversity", objectClass = "list",
-                  desc = paste0("List of the diversity rasters for each stream2:5"))
+                  desc = paste0("List of species that belong to stream 5 -- all others (i.e. migratory birds)"))
   )
 ))
 
@@ -251,14 +248,15 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
                                                                   stream3 = sim$stream3[[paste0("Year", time(sim))]],
                                                                   stream4 = sim$stream4[[paste0("Year", time(sim))]],
                                                                   stream5 = sim$stream5[[paste0("Year", time(sim))]])
-      sim$speciesStreamsList[[paste0("Year", time(sim))]] <- sim$speciesStreamsList[[paste0("Year", time(sim))]][lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY
+      sim$speciesStreamsList[[paste0("Year", time(sim))]] <- sim$speciesStreamsList[[paste0("Year", time(sim))]][
+        lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY
 
       # Schedule future events
       sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "prepreStreamStack")
     },
     calculateStreamDiversity = {
       # 2. For the specific year, calculate stream diversity
-      sim$latestYearsDiversity <- lapply(names(sim$speciesStreamsList[[paste0("Year", time(sim))]]), function(stream){
+      sim$latestYearsDiversity <- lapply(names(sim$speciesStreamsList[[paste0("Year", time(sim))]]), function(stream) {
         thisYearIndices <- diversityIndices(birdStreamList = sim$speciesStreamsList[[paste0("Year", time(sim))]][[stream]],
                                             pathOutput = dataPath(sim), currentTime = time(sim), stream = stream)
         return(thisYearIndices)
