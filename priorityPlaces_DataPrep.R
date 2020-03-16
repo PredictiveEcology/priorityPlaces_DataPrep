@@ -11,7 +11,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = deparse(list("README.txt", "priorityPlaces_DataPrep.Rmd")),
-  reqdPkgs = list("googledrive", "tati-micheletti/usefun", "crayon", "vegan", "raster"),
+  reqdPkgs = list("crayon", "googledrive", "raster", "tati-micheletti/usefun", "vegan"),
   parameters = rbind(
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA,
                     "Describes the simulation time at which the first plot event should occur."),
