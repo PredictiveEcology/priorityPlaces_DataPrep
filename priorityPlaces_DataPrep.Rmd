@@ -1,6 +1,6 @@
 ---
 title: "priorityPlaces_DataPrep"
-author: ""
+author: "Tati Micheletti and Alex Chubaty"
 date: "04 March 2020"
 output: pdf_document
 editor_options: 
