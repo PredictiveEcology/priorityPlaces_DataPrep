@@ -47,7 +47,7 @@ defineModule(sim, list(
                                 "index for presence of Caribous"), sourceURL = NA),
     expectsInput(objectName = "protectedAreas", objectClass = "RasterLayer | shapefile",
                  desc = paste0("Raster of protected areas, it will filter for non-na values",
-                               " (i.e. all but protected areas need to be NA"), sourceURL = NA),
+                               " (i.e. all but protected areas need to be NA"), sourceURL = NA)
   ),
   outputObjects = bind_rows(
     createsOutput(objectName = "featuresID", objectClass = "rasterStack",
