@@ -39,11 +39,4 @@ vignettes/*.pdf
 .Renviron
 .Rproj.user
 
-
-#Data
-*.tif
-*.grd
-*.gri
 /inputs
-data/speciesStreams.rds
-

@@ -189,7 +189,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "normalizingFeatures")
     },
     assignStream = {
-
       # 1. Get the names of the birdPrediction and allocate these into streams
       speciesWeWant <- Cache(prepInputs, url = "https://drive.google.com/file/d/17OiIWC5oJcP2Y0cXMJH_KUWmYJrhR-dn/view?usp=sharing",
                              destinationPath = dataPath(sim), fun = "readRDS") # ==> streams file
@@ -199,10 +198,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       speciesWeWant_Vec <- speciesWeWant$SPEC
       commonSp <- speciesWeWant_Vec[speciesWeWant_Vec %in% speciesWeHave]
       sim$speciesStreams <- speciesWeWant[SPEC %in% commonSp, c("SPEC", "Management Stream")]
-
     },
     prepreStreamStack = {
-
       # 2. For the specific year, grab all the birds layers and assign them to a list of streams
       thisYearsBirds <- sim$birdPrediction[[paste0("Year", time(sim))]]
       birdSpecies <- names(thisYearsBirds)
@@ -321,44 +318,48 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
 .inputObjects <- function(sim) {
 if (!suppliedElsewhere("birdPrediction", sim)){
   message(crayon::red("No bird layers provided. Using DUMMY data"))
-  sim$birdPrediction <- list(Year2001 = list(BBWA = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=1X8O89Yem6WjcwCTPvj9OJowXLCsJMAAO"),
-                                         CAWA = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=18jjCr8bKN6ftX8M_EdrRA5y8RB8KPuZI"),
-                                         BLBW = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=13ElhFF1q5NvdQvVb3in8jdP5mWTJLXNq"),
-                                         CCSP = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=1Is7SvDVka-dq6KBzs_YMM81wOl0pfvhA"),
-                                         BCCH = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=1MVzhzEDh0UAYD3_94ZlkDUQkgDOKk1yL"),
-                                         AMCR = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=13YZ-gKXtDf3w6900BR4f2jxndcUOj3w9")),
-                         Year2100 = list(BBWA = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=1WcfPMD7j_-Nfad7koz-rfm3S0-IP2Jsr"),
-                                         BLBW = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=1tBjED-qKtqPFVWAcLKW2_GLF6SSWbhsQ"),
-                                         CAWA = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=1OGGroI187s5yP17G91qZ2zLEhQe9YSTe"),
-                                         CCSP = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=1VQOBUHARR6HWGMHshJ-9iQ9l2tsVEa4I"),
-                                         AMCR = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=1-RSMtl5HhejBGO1RrTFRAp-wNjYP_BpI"),
-                                         BCCH = prepInputs(destinationPath = Paths$inputPath,
-                                                           url = "https://drive.google.com/open?id=1fPBkC99KYI9vxOVIDUiceerIYxFusfhY"))
+  sim$birdPrediction <- list(
+    Year2001 = list(BBWA = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=1X8O89Yem6WjcwCTPvj9OJowXLCsJMAAO"),
+                    CAWA = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=18jjCr8bKN6ftX8M_EdrRA5y8RB8KPuZI"),
+                    BLBW = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=13ElhFF1q5NvdQvVb3in8jdP5mWTJLXNq"),
+                    CCSP = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=1Is7SvDVka-dq6KBzs_YMM81wOl0pfvhA"),
+                    BCCH = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=1MVzhzEDh0UAYD3_94ZlkDUQkgDOKk1yL"),
+                    AMCR = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=13YZ-gKXtDf3w6900BR4f2jxndcUOj3w9")),
+    Year2100 = list(BBWA = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=1WcfPMD7j_-Nfad7koz-rfm3S0-IP2Jsr"),
+                    BLBW = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=1tBjED-qKtqPFVWAcLKW2_GLF6SSWbhsQ"),
+                    CAWA = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=1OGGroI187s5yP17G91qZ2zLEhQe9YSTe"),
+                    CCSP = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=1VQOBUHARR6HWGMHshJ-9iQ9l2tsVEa4I"),
+                    AMCR = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=1-RSMtl5HhejBGO1RrTFRAp-wNjYP_BpI"),
+                    BCCH = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                      url = "https://drive.google.com/open?id=1fPBkC99KYI9vxOVIDUiceerIYxFusfhY"))
   )
 
-  if (!suppliedElsewhere("predictedPresenceProbability", sim)){
+  if (!suppliedElsewhere("predictedPresenceProbability", sim)) {
     message(crayon::red("No caribou layers provided. Using DUMMY data"))
-  sim$predictedPresenceProbability <- list(Year2001 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath,
-                                                                                    url ="https://drive.google.com/open?id=1Dhk7fYHysrnb6kXCA4KlcFp73ohAtMJ2"),
-                                                       rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath,
-                                                                                      url ="https://drive.google.com/open?id=1NZ9T2DwrbKn_bvDmiBnZ1mowBR-lqJZk")),
-                                       Year2100 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath,
-                                                                                    url ="https://drive.google.com/open?id=1ONJM8ITMP6A9_WTU2K2yIWZ0VFJWXTyg"),
-                                                       rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath,
-                                                                                      url ="https://drive.google.com/open?id=1Y_Ij-I44sq3QvjTLukEDKlUuH6HDXgGx")))
+
+    sim$predictedPresenceProbability <- list(
+      Year2001 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                                   url ="https://drive.google.com/open?id=1Dhk7fYHysrnb6kXCA4KlcFp73ohAtMJ2"),
+                      rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                                     url ="https://drive.google.com/open?id=1NZ9T2DwrbKn_bvDmiBnZ1mowBR-lqJZk")),
+      Year2100 = list(rasterOfAverage = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                                   url ="https://drive.google.com/open?id=1ONJM8ITMP6A9_WTU2K2yIWZ0VFJWXTyg"),
+                      rasterOfUncertain = prepInputs(destinationPath = Paths$inputPath, filename2 = NULL,
+                                                     url ="https://drive.google.com/open?id=1Y_Ij-I44sq3QvjTLukEDKlUuH6HDXgGx")))
   }
-  if (!suppliedElsewhere("planningUnit", sim)){
+
+  if (!suppliedElsewhere("planningUnit", sim)) {
     message(crayon::red("No planningUnit layer provided. Basing the planning unit on the caribou layer (the whole are, excl. water bodies)"))
     booBasedPU <- sim$predictedPresenceProbability[[1]][[1]]
     booBasedPU[!is.na(booBasedPU)] <- 0
@@ -373,4 +374,3 @@ if (!suppliedElsewhere("birdPrediction", sim)){
 
   return(invisible(sim))
 }
-
