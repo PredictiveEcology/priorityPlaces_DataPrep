@@ -39,7 +39,5 @@ vignettes/*.pdf
 .Renviron
 .Rproj.user
 
+## add data ignores to 'data/.gitignore'
 /inputs
-*.grd
-*.gri
-*.tif
