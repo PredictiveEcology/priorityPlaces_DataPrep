@@ -23,11 +23,11 @@ For help writing in R Markdown, see http://rmarkdown.rstudio.com/.
 # Usage
 
 ```{r module_usage}
-library(gurobi)
-library(raster)
-library(reproducible)
-library(SpaDES.core)
-library(SpaDES.tools)
+library("gurobi")
+library("raster")
+library("reproducible")
+library("SpaDES.core")
+library("SpaDES.tools")
 
 scratchDir <- file.path("/mnt/scratch")
 
