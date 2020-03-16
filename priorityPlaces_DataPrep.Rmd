@@ -31,6 +31,8 @@ library(SpaDES.tools)
 
 scratchDir <- file.path("/mnt/scratch")
 
+options(reproducible.cacheSaveFormat = "rds")
+
 setPaths(modulePath = file.path(dirname(getwd())),
          outputPath = checkPath(file.path(scratchDir, "TMP_priorityPlacesTest"), create = TRUE))
 getPaths() # shows where the 4 relevant paths are
@@ -39,9 +41,19 @@ times <- list(start = 2001, end = 2100)
 
 parameters <- list(
   priorityPlaces_DataPrep = list(
-    "stepInterval" = 99
+    "stepInterval" = 99,
+       "normalizeRasters" = FALSE
+    ),
+  priorityPlaces = list(".useCache" = TRUE,
+                        "fasterOptimization" = TRUE,
+                        "targets" = c(0.1, 0.05, 0.01, 0.005, 0.001),
+                        "binaryDecision" = FALSE,
+                        "firstFeasible" = FALSE,
+                        "presolve" = 2,
+                        "verbose" = TRUE,
+                        "timeLimit" = 1800)
+
     )
-)
 
 modules <- list("priorityPlaces_DataPrep")
 inputs <- list()

@@ -53,7 +53,7 @@ defineModule(sim, list(
                                 "index for presence of Caribous"), sourceURL = NA)
   ),
   outputObjects = bind_rows(
-    createsOutput(objectName = "planningUnit", objectClass = "RasterLayer | data.frame",
+    createsOutput(objectName = "planningUnit", objectClass = "RasterLayer",
                  desc = paste0("Planning unit is the spatial area (study area) that should be",
                                "either a raster or data.frame. If the last, calculations",
                                " are faster. If the last, each row in the planning unit table must",
@@ -280,7 +280,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       missingStreams <- setdiff(paste0("stream", 1:5), names(sim$latestYearsDiversity))
       if (!is.null(missingStreams)){
         missingRas <- lapply(missingStreams, function(mssStr){
-          zeroedRas <- raster::setValues(sim$stream1[[paste0("Year", time(sim))]][[1]], 0)
+          zeroedRas <- raster::setValues(sim$stream1[[paste0("Year", time(sim))]][[1]], 1)
           ras <- Cache(postProcess, x = zeroedRas, # Its is zeroed so it doesn't add anything to the features, but can be passed
                              rasterToMatch =  sim$stream1[[paste0("Year", time(sim))]][[1]],
                              maskWithRTM = TRUE,
@@ -308,7 +308,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         return(lay)
       })
       names(normalized) <- names(sim$featuresID[[paste0("Year", time(sim))]])
-      sim$featuresID[[paste0("Year", time(sim))]] <- normalized
+      sim$featuresID[[paste0("Year", time(sim))]] <- raster::stack(normalized)
       # Schedule future events
       sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "normalizingFeatures")
     },
@@ -363,6 +363,7 @@ if (!suppliedElsewhere("birdPrediction", sim)){
     booBasedPU <- sim$predictedPresenceProbability[[1]][[1]]
     booBasedPU[!is.na(booBasedPU)] <- 0
     sim$planningUnit <- booBasedPU
+    names(sim$planningUnit) <- "planningUnit"
   }
 
 }
