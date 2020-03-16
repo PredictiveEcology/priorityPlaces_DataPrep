@@ -104,7 +104,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
   switch(
     eventType,
     init = {
-
       # 1. Check that birdPrediction and predictedPresenceProbability stack. If not, postProcess one of these ( [ FIX ] to be added later)
       # TODO
       tryCatch({
@@ -112,8 +111,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
         stk <- stack(stkBirs, stkBoo)
 
-      }, error = function(e)
-        {
+      }, error = function(e) {
         message(crayon::red("sim$birdPrediction and sim$predictedPresenceProbability do not align. Will attempt postProcessing caribou layers using bird layers as RTM."))
         booPrediction <- lapply(names(sim$predictedPresenceProbability), function(year){
           booPrediction <- lapply(names(sim$predictedPresenceProbability[[year]]), function(TYPE){
@@ -137,35 +135,34 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       # 2. Get the importantAreas and protectedAreas.
       # If raster, postProcess if it doesn't stack with the other layers: predictedPresenceProbability
       if (!is.null(sim$importantAreas)){
-      tryCatch({ # importantAreas
-          stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
-          stk <- stack(sim$importantAreas, stkBoo)
-        }, error = function(e)
-        {
-          message("sim$importantAreas and sim$predictedPresenceProbability do not align.
-                  Will try to postprocess sim$importantAreas.")
-          tryCatch({
-            importantAreas <- postProcess(x = sim$importantAreas,
-                                          rasterToMatch = sim$predictedPresenceProbability[[1]][[1]])
-            sim$importantAreas <- importantAreas
-          }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
-        }
-      )
+        tryCatch({ # importantAreas
+            stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
+            stk <- stack(sim$importantAreas, stkBoo)
+          }, error = function(e)
+          {
+            message("sim$importantAreas and sim$predictedPresenceProbability do not align.
+                    Will try to postprocess sim$importantAreas.")
+            tryCatch({
+              importantAreas <- postProcess(x = sim$importantAreas,
+                                            rasterToMatch = sim$predictedPresenceProbability[[1]][[1]])
+              sim$importantAreas <- importantAreas
+            }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
+          }
+        )
       }
       if (!is.null(sim$protectedAreas)){
-      tryCatch({ #protectedAreas
-        stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
-        stk <- stack(sim$protectedAreas, stkBoo)
-      }, error = function(e)
-        {
-        message("sim$protectedAreas and sim$predictedPresenceProbability do not align.
-                Will try to postprocess sim$protectedAreas.")
-        tryCatch({
-          importantAreas <- postProcess(x = sim$protectedAreas,
-                                        rasterToMatch = sim$predictedPresenceProbability[[1]][[1]])
-          sim$protectedAreas <- protectedAreas
-        }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
-      })
+        tryCatch({ #protectedAreas
+          stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
+          stk <- stack(sim$protectedAreas, stkBoo)
+        }, error = function(e) {
+          message("sim$protectedAreas and sim$predictedPresenceProbability do not align.
+                  Will try to postprocess sim$protectedAreas.")
+          tryCatch({
+            importantAreas <- postProcess(x = sim$protectedAreas,
+                                          rasterToMatch = sim$predictedPresenceProbability[[1]][[1]])
+            sim$protectedAreas <- protectedAreas
+          }, error = function(e) stop("PostProcessing was not able to align the rasters. Please debug."))
+        })
       }
 
       # Create the list placeholders
@@ -186,7 +183,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "normalizingFeatures")
     },
     assignStream = {
-
       # 1. Get the names of the birdPrediction and allocate these into streams
       speciesWeWant <- Cache(prepInputs, url = "https://drive.google.com/file/d/17OiIWC5oJcP2Y0cXMJH_KUWmYJrhR-dn/view?usp=sharing",
                              destinationPath = dataPath(sim), fun = "readRDS") # ==> streams file
@@ -199,7 +195,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
 
     },
     prepreStreamStack = {
-
       # 2. For the specific year, grab all the birds layers and assign them to a list of streams
       thisYearsBirds <- sim$birdPrediction[[paste0("Year", time(sim))]]
       birdSpecies <- names(thisYearsBirds)
@@ -243,11 +238,13 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       migratorySpecies <- speciesWeHave[!speciesWeHave %in% names(thisYearsBirds)]
       # names(birdPrediction[[paste0("Year", time(sim))]])[!names(birdPrediction[[paste0("Year", time(sim))]]) %in% names(thisYearsBirds)]
 
-      sim$speciesStreamsList[[paste0("Year", time(sim))]] <- list(stream1 = sim$stream1[[paste0("Year", time(sim))]],
-                                                                  stream2 = sim$stream2[[paste0("Year", time(sim))]],
-                                                                  stream3 = sim$stream3[[paste0("Year", time(sim))]],
-                                                                  stream4 = sim$stream4[[paste0("Year", time(sim))]],
-                                                                  stream5 = sim$stream5[[paste0("Year", time(sim))]])
+      sim$speciesStreamsList[[paste0("Year", time(sim))]] <- list(
+        stream1 = sim$stream1[[paste0("Year", time(sim))]],
+        stream2 = sim$stream2[[paste0("Year", time(sim))]],
+        stream3 = sim$stream3[[paste0("Year", time(sim))]],
+        stream4 = sim$stream4[[paste0("Year", time(sim))]],
+        stream5 = sim$stream5[[paste0("Year", time(sim))]]
+      )
       sim$speciesStreamsList[[paste0("Year", time(sim))]] <- sim$speciesStreamsList[[paste0("Year", time(sim))]][
         lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY
 
@@ -369,7 +366,9 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
     }
 
     if (!suppliedElsewhere("planningUnit", sim)) {
-      message(crayon::red("No planningUnit layer provided. Basing the planning unit on the caribou layer (the whole are, excl. water bodies)"))
+      message(crayon::red("No planningUnit layer provided.",
+                          "Basing the planning unit on the caribou layer",
+                          "(the whole are, excl. water bodies)"))
       booBasedPU <- sim$predictedPresenceProbability[[1]][[1]]
       booBasedPU[!is.na(booBasedPU)] <- 0
       sim$planningUnit <- booBasedPU
@@ -377,7 +376,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
     }
   }
 
-  cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
+  cacheTags <- c(currentModule(sim), "function:.inputObjects")
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
