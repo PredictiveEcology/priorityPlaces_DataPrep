@@ -6,12 +6,15 @@ defineModule(sim, list(
   authors = c(person("Tati", "Micheletti", email = "tati.micheletti@gmail.com", role = c("aut", "cre")),
               person("Alex", "Chubaty", email = "achubaty@for-cast.ca", role = "aut")),
   childModules = character(0),
-  version = list(SpaDES.core = "0.2.9", priorityPlaces_DataPrep = "0.0.2"),
+  version = list(SpaDES.core = "0.2.9", pemisc = "0.0.2.9000",
+                 priorityPlaces_DataPrep = "0.0.2"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = deparse(list("README.txt", "priorityPlaces_DataPrep.Rmd")),
-  reqdPkgs = list("assertthat", "crayon", "googledrive", "raster", "tati-micheletti/usefun", "vegan"),
+  reqdPkgs = list("assertthat", "crayon", "googledrive", "raster",
+                  "PredictiveEcology/pemisc@development",
+                  "tati-micheletti/usefun", "vegan"),
   parameters = rbind(
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA,
                     "Describes the simulation time at which the first plot event should occur."),
@@ -47,7 +50,7 @@ defineModule(sim, list(
   ),
   inputObjects = bind_rows(
     expectsInput(objectName = "anthropogenicLayer", objectClass = "RasterLayer",
-                 desc = "Raster with road buffered disturbances. Can be replaced by a more complete layer", 
+                 desc = "Raster with road buffered disturbances. Can be replaced by a more complete layer",
                  sourceURL = "https://drive.google.com/open?id=1zj7zo8NBNhxxHMUL4ZnKTaP3niuQEI1m"),
     expectsInput(objectName = "birdPrediction", objectClass = "list",
                  desc = "List per year of the bird species predicted rasters", sourceURL = NA),
@@ -361,7 +364,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         # Remove from planningUnit the anthropogenic disturbance
         if (is(sim$anthropogenicLayer, "RasterLayer")){
           # assertion
-          assertthat::assert_that(is(raster::stack(sim$anthropogenicLayer, sim$planningUnit), "RasterStack"), 
+          assertthat::assert_that(is(raster::stack(sim$anthropogenicLayer, sim$planningUnit), "RasterStack"),
                                   msg = "planningUnit and anthropogenicLayer do not align. Please debug")
           sim$planningUnit[which(!is.na(raster::getValues(sim$anthropogenicLayer)))] <- NA
         }
@@ -444,7 +447,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           stop("Currenty only 'standard' or 'biodiversity' are accepted as 'typeOfAnalysis'")        }
       }
     }
-  
+
   if (!suppliedElsewhere("anthropogenicLayer", sim)){
     sim$anthropogenicLayer <- NA
   }
