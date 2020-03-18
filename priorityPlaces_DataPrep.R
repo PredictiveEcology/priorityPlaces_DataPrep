@@ -6,7 +6,7 @@ defineModule(sim, list(
   authors = c(person("Tati", "Micheletti", email = "tati.micheletti@gmail.com", role = c("aut", "cre")),
               person("Alex", "Chubaty", email = "achubaty@for-cast.ca", role = "aut")),
   childModules = character(0),
-  version = list(SpaDES.core = "0.2.9", priorityPlaces_DataPrep = "0.0.1"),
+  version = list(SpaDES.core = "0.2.9", priorityPlaces_DataPrep = "0.0.2"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
@@ -46,6 +46,9 @@ defineModule(sim, list(
                           "of the planningUnit. Default to NA, which ignores weights for all layers"))
   ),
   inputObjects = bind_rows(
+    expectsInput(objectName = "anthropogenicLayer", objectClass = "RasterLayer",
+                 desc = "Raster with road buffered disturbances. Can be replaced by a more complete layer", 
+                 sourceURL = "https://drive.google.com/open?id=1zj7zo8NBNhxxHMUL4ZnKTaP3niuQEI1m"),
     expectsInput(objectName = "birdPrediction", objectClass = "list",
                  desc = "List per year of the bird species predicted rasters", sourceURL = NA),
     expectsInput(objectName = "importantAreas", objectClass = "RasterLayer | shapefile",
@@ -320,7 +323,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         if (P(sim)$typeOfAnalysis == "biodiversity") {
           matched <- paste0("stream", P(sim)$featureStreams)
           streamsCost <- setdiff(names(stk), matched)
-          assertthat::are_equal(nrow(P(sim)$weights), raster::nlayers(streamsCost))
+          assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
           sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
             sim$planningUnit <- raster::subset(stk, streamsCost)
         } else {
@@ -355,6 +358,13 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         names(normalized) <- paste0("Year", time(sim))
         # 4. Subtract from 1
         sim$planningUnit <- 1 - normalized[[paste0("Year", time(sim))]]
+        # Remove from planningUnit the anthropogenic disturbance
+        if (is(sim$anthropogenicLayer, "RasterLayer")){
+          # assertion
+          assertthat::assert_that(is(raster::stack(sim$anthropogenicLayer, sim$planningUnit), "RasterStack"), 
+                                  msg = "planningUnit and anthropogenicLayer do not align. Please debug")
+          sim$planningUnit[which(!is.na(raster::getValues(sim$anthropogenicLayer)))] <- NA
+        }
       }
 
       # Schedule future events
@@ -434,6 +444,10 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           stop("Currenty only 'standard' or 'biodiversity' are accepted as 'typeOfAnalysis'")        }
       }
     }
+  
+  if (!suppliedElsewhere("anthropogenicLayer", sim)){
+    sim$anthropogenicLayer <- NA
+  }
 
   cacheTags <- c(currentModule(sim), "function:.inputObjects")
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
