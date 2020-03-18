@@ -334,13 +334,13 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
     normalizingFeatures = {
       # 4. Normalizing rasters
       if (P(sim)$normalizeRasters) {
-        normalized <- normalizeStack(stk = sim$featuresID[[paste0("Year", time(sim))]])
+        normalized <- normalizeStack(sim$featuresID[[paste0("Year", time(sim))]])
         sim$featuresID[[paste0("Year", time(sim))]] <- raster::stack(normalized)
       }
 
       if (P(sim)$typeOfAnalysis == "biodiversity") {
         # 1. Normalize cost layers so I can apply the weight
-        normalized <- normalizeStack(stk = sim$planningUnit)
+        normalized <- normalizeStack(sim$planningUnit)
         # 2. Apply the weight and sum all
         if (is(P(sim)$weights, "data.table")) {
           weights <- P(sim)$weights
@@ -351,7 +351,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         }
         normalized <- raster::calc(normalized, fun = sum)
         # 3. Normalize again
-        normalized <- normalizeStack(stk = normalized)
+        normalized <- normalizeStack(normalized)
         names(normalized) <- paste0("Year", time(sim))
         # 4. Subtract from 1
         sim$planningUnit <- 1 - normalized[[paste0("Year", time(sim))]]
