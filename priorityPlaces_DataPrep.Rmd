@@ -54,7 +54,7 @@ parameters <- list(
                         "timeLimit" = 1800)
     )
 
-modules <- list("priorityPlaces_DataPrep")
+modules <- list("priorityPlaces_DataPrep", "priorityPlaces")
 inputs <- list()
 outputs <- list()
 
