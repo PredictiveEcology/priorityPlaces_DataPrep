@@ -39,7 +39,7 @@ parameters <- list(
 library(raster)
 library(reproducible)
 
-modules <- list("priorityPlaces_DataPrep")
+modules <- list("priorityPlaces_DataPrep", "priorityPlaces")
 inputs <- list()
 outputs <- list()
 
