@@ -54,7 +54,7 @@ parameters <- list(
                         "presolve" = 2,
                         "verbose" = TRUE,
                         "timeLimit" = 1800)
-    )
+)
 
 modules <- list("priorityPlaces_DataPrep", "priorityPlaces")
 inputs <- list()
