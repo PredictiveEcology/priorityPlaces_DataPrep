@@ -42,11 +42,13 @@ times <- list(start = 2001, end = 2100)
 parameters <- list(
   priorityPlaces_DataPrep = list(
     "stepInterval" = 99,
-       "normalizeRasters" = FALSE
+    "typeOfAnalysis" = "biodiversity",
+    "weights" = data.frame(stream = c('stream3', 'stream4', 'stream5'),
+                           weight = c(1.5, 1, 0.5))
   ),
   priorityPlaces = list(".useCache" = TRUE,
                         "fasterOptimization" = TRUE,
-                        "targets" = c(0.1, 0.05, 0.01, 0.005, 0.001),
+                        "targets" = c(0.3, 0.2),
                         "binaryDecision" = FALSE,
                         "firstFeasible" = FALSE,
                         "presolve" = 2,
