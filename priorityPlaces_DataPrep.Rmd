@@ -44,11 +44,11 @@ parameters <- list(
     "stepInterval" = 99,
     "typeOfAnalysis" = "biodiversity",
     "weights" = data.frame(stream = c('stream3', 'stream4', 'stream5'),
-                           weight = c(1.5, 1, 0.5))
+                           weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
   ),
   priorityPlaces = list(".useCache" = TRUE,
                         "fasterOptimization" = TRUE,
-                        "targets" = c(0.3, 0.2),
+                        "targets" = c(0.3, 0.2), ## streams 1, 2
                         "binaryDecision" = FALSE,
                         "firstFeasible" = FALSE,
                         "presolve" = 2,
