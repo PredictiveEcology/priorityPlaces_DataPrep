@@ -340,7 +340,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
     normalizingFeatures = {
       # 4. Normalizing rasters
       if (P(sim)$normalizeRasters) {
-        normalized <- pemisc::normalizeStack(raster::stack(sim$featuresID[[paste0("Year", time(sim))]]))
+        rs <- raster::stack(sim$featuresID[[paste0("Year", time(sim))]])
+        normalized <- pemisc::normalizeStack(rs)
         sim$featuresID[[paste0("Year", time(sim))]] <- raster::stack(normalized)
       }
 
