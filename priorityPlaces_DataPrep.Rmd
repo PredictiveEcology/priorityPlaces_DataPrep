@@ -55,7 +55,7 @@ parameters <- list(
                         ),
                         "fasterOptimization" = TRUE,
                         "firstFeasible" = FALSE,
-                        "penalty" = 0.01, ## used to penalize highly fragmented solutions
+                        "penalty" = NULL, ## used to penalize highly fragmented solutions
                         "presolve" = 2,
                         "solutions" = 1, ## converges on a single solution already
                         "solver" = "rsymphony", ## change accordingly
