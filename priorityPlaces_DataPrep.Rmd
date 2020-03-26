@@ -46,14 +46,23 @@ parameters <- list(
                            weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
   ),
   priorityPlaces = list(".useCache" = TRUE,
-                        "solver" = "rsymphony", ## change accordingly
-                        "fasterOptimization" = TRUE,
-                        "targets" = c(0.3, 0.2), ## streams 1, 2
                         "binaryDecision" = FALSE,
+                        "constraintType" = list(
+                          #add_locked_in_constraints = list(locked_in = c(50, 53, 52, 51)),
+                          #add_feature_contiguity_constraints = NULL,
+                          #add_neighbor_constraints = list(k = 2),
+                          #add_locked_out_constraints = list(locked_out = c(3, 4, 13, 14))
+                        ),
+                        "fasterOptimization" = TRUE,
                         "firstFeasible" = FALSE,
+                        "penalty" = 0.01, ## used to penalize highly fragmented solutions
                         "presolve" = 2,
-                        "verbose" = TRUE,
-                        "timeLimit" = 1800)
+                        "solutions" = 1, ## converges on a single solution already
+                        "solver" = "rsymphony", ## change accordingly
+                        "targets" = c(0.3, 0.2), ## streams 1, 2
+                        "timeLimit" = 1800,
+                        "verbose" = TRUE
+  )
 )
 
 modules <- list("priorityPlaces_DataPrep", "priorityPlaces")
