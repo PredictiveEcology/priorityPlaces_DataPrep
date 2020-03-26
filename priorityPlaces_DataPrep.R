@@ -341,8 +341,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       # 4. Normalizing rasters
       if (P(sim)$normalizeRasters) {
         rs <- raster::stack(sim$featuresID[[paste0("Year", time(sim))]])
-        normalized <- pemisc::normalizeStack(rs)
-        sim$featuresID[[paste0("Year", time(sim))]] <- raster::stack(normalized)
+        sim$featuresID[[paste0("Year", time(sim))]] <- pemisc::normalizeStack(rs)
       }
 
       if (P(sim)$typeOfAnalysis == "biodiversity") {
