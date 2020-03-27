@@ -33,7 +33,8 @@ scratchDir <- file.path("/mnt/scratch")
 options(reproducible.cacheSaveFormat = "rds")
 
 setPaths(modulePath = file.path(dirname(getwd())),
-         outputPath = checkPath(file.path(scratchDir, "TMP_priorityPlacesTest"), create = TRUE))
+         inputPath = checkPath(file.path(scratchDir, "TMP_priorityPlacesTest", "inputs"), create = TRUE),
+         outputPath = checkPath(file.path(scratchDir, "TMP_priorityPlacesTest", "outputs"), create = TRUE))
 getPaths() # shows where the 4 relevant paths are
 options(reproducible.showSimilar = TRUE)
 times <- list(start = 2001, end = 2100)
