@@ -30,7 +30,7 @@ library("SpaDES.tools")
 library("usefun")
 library("googledrive")
 
-
+drive_auth("tati.micheletti@gmail.com")
 # scratchDir <- file.path("/mnt/tmp")
 
 options(reproducible.cacheSaveFormat = "rds")
