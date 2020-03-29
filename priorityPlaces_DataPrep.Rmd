@@ -27,26 +27,31 @@ library("raster")
 library("reproducible")
 library("SpaDES.core")
 library("SpaDES.tools")
+library("usefun")
+library("googledrive")
 
-scratchDir <- file.path("/mnt/scratch")
+
+# scratchDir <- file.path("/mnt/tmp")
 
 options(reproducible.cacheSaveFormat = "rds")
 
-setPaths(modulePath = file.path(dirname(getwd())),
-         inputPath = checkPath(file.path(scratchDir, "TMP_priorityPlacesTest", "inputs"), create = TRUE),
-         outputPath = checkPath(file.path(scratchDir, "TMP_priorityPlacesTest", "outputs"), create = TRUE))
+setPaths(modulePath = file.path(getwd(), "modules"),
+         inputPath = file.path(getwd(), "inputs"),
+         cachePath = file.path(getwd(), "cache"),
+         outputPath = file.path(getwd(), "outputs"))
 getPaths() # shows where the 4 relevant paths are
-options(reproducible.showSimilar = TRUE)
-times <- list(start = 2001, end = 2100)
+options(reproducible.showSimilar = FALSE)
+times <- list(start = 2011, end = 2100)
 
 parameters <- list(
   priorityPlaces_DataPrep = list(
-    "stepInterval" = 99,
+    "stepInterval" = 89,
     "typeOfAnalysis" = "biodiversity",
     "weights" = data.frame(stream = c('stream3', 'stream4', 'stream5'),
                            weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
   ),
-  priorityPlaces = list(".useCache" = TRUE,
+  priorityPlaces = list(".useCache" = FALSE,
+                        "stepInterval" = 89,
                         "binaryDecision" = FALSE,
                         "constraintType" = list(
                           #add_locked_in_constraints = list(locked_in = c(50, 53, 52, 51)),
@@ -62,7 +67,8 @@ parameters <- list(
                         #"solver" = "rsymphony", ## change accordingly
                         "targets" = c(0.3, 0.2), ## streams 1, 2
                         "timeLimit" = 1800,
-                        "verbose" = TRUE
+                        "verbose" = TRUE,
+                        ".plotInitialTime" = NA
   )
 )
 
@@ -70,9 +76,89 @@ modules <- list("priorityPlaces_DataPrep", "priorityPlaces")
 inputs <- list()
 outputs <- list()
 
-objects <- list()
+objects <- list(predictedPresenceProbability = predictedPresenceProbability,
+                birdPrediction = birdPrediction)
 
 mySim <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
+
+writeRaster(mySim$priorityAreas[["Year2011"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2011.tif"), format = "GTiff", overwrite = TRUE)
+writeRaster(mySim$priorityAreas[["Year2100"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2100.tif"), format = "GTiff", overwrite = TRUE)
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2011.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2100.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
+
+# _____________________
+
+parameters <- list(
+  priorityPlaces_DataPrep = list(
+    "stepInterval" = 89,
+    "typeOfAnalysis" = "biodiversity",
+    "weights" = data.frame(stream = c('stream3', 'stream4', 'stream5'),
+                           weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
+  ),
+  priorityPlaces = list(".useCache" = FALSE,
+                        "stepInterval" = 89,
+                        "binaryDecision" = FALSE,
+                        "constraintType" = list(
+                          #add_locked_in_constraints = list(locked_in = c(50, 53, 52, 51)),
+                          #add_feature_contiguity_constraints = NULL,
+                          #add_neighbor_constraints = list(k = 2),
+                          #add_locked_out_constraints = list(locked_out = c(3, 4, 13, 14))
+                        ),
+                        "fasterOptimization" = TRUE,
+                        "firstFeasible" = FALSE,
+                        "penalty" = NULL, ## used to penalize highly fragmented solutions
+                        "presolve" = 2,
+                        "solutions" = 1, ## converges on a single solution already
+                        "solver" = "gurobi", ## change accordingly
+                        "targets" = c(0.3, 0.2), ## streams 1, 2
+                        "timeLimit" = 1800,
+                        "verbose" = TRUE,
+                        ".plotInitialTime" = NA
+  )
+)
+
+mySim2 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
+writeRaster(mySim2$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30.tif"), format = "GTiff", overwrite = TRUE)
+writeRaster(mySim2$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30.tif"), format = "GTiff", overwrite = TRUE)
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_30_2011.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_30_2100.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
+
+# _____________________
+parameters <- list(
+  priorityPlaces_DataPrep = list(
+    "stepInterval" = 89,
+    "typeOfAnalysis" = "biodiversity",
+    "weights" = data.frame(stream = c('stream3', 'stream4', 'stream5'),
+                           weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
+  ),
+  priorityPlaces = list(".useCache" = FALSE,
+                        "stepInterval" = 89,
+                        "binaryDecision" = FALSE,
+                        "constraintType" = list(
+                          #add_locked_in_constraints = list(locked_in = c(50, 53, 52, 51)),
+                          #add_feature_contiguity_constraints = NULL,
+                          #add_neighbor_constraints = list(k = 2),
+                          #add_locked_out_constraints = list(locked_out = c(3, 4, 13, 14))
+                        ),
+                        "fasterOptimization" = TRUE,
+                        "firstFeasible" = FALSE,
+                        "penalty" = NULL, ## used to penalize highly fragmented solutions
+                        "presolve" = 2,
+                        "solutions" = 1, ## converges on a single solution already
+                        "solver" = "gurobi", ## change accordingly
+                        "targets" = c(0.6, 0.2), ## streams 1, 2
+                        "timeLimit" = 1800,
+                        "verbose" = TRUE,
+                        ".plotInitialTime" = NA
+  )
+)
+
+mySim3 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
+writeRaster(mySim3$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2011.tif"), format = "GTiff", overwrite = TRUE)
+writeRaster(mySim3$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2100.tif"), format = "GTiff", overwrite = TRUE)
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_60_2011.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_60_2100.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
+
 ```
 
 # Events
