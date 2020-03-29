@@ -26,5 +26,5 @@ normalizeStackTM <- function(stk){
     return(lay)
   })
   names(normalized) <- names(stk)
-  return(normalized)
+  return(stack(normalized))
 }
