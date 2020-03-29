@@ -114,7 +114,7 @@ parameters <- list(
                         "presolve" = 2,
                         "solutions" = 1, ## converges on a single solution already
                         #"solver" = "rsymphony", ## change accordingly
-                        "targets" = c(0.3, 0.2), ## streams 1, 2
+                        "targets" = c(0.15, 0.2), ## streams 1, 2
                         "timeLimit" = 1800,
                         "verbose" = TRUE,
                         ".plotInitialTime" = NA
