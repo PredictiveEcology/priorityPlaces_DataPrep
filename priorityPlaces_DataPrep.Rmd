@@ -43,6 +43,10 @@ getPaths() # shows where the 4 relevant paths are
 options(reproducible.showSimilar = FALSE)
 times <- list(start = 2011, end = 2100)
 
+# Experiment:
+# Weight unitPlanning with 3 streams: No weight x 1.5, 1, 0.5
+# features: 0.15, 0.30, 0.60
+
 #==================# Load Data #==========================
 birdsOutputsFolder <- "/mnt/data/Micheletti/NWT/outputs/2019/18JUL19/birdPredictionsV3" # 2011 and 2100 (convert 2021 into 2011)
 caribouOutputsFolder <- "/mnt/data/Micheletti/NWT/outputs/2019/18JUN19_CS_SCFM/caribouRSF" #  2011 and 2100
@@ -96,7 +100,7 @@ parameters <- list(
   priorityPlaces_DataPrep = list(
     "stepInterval" = 89,
     "typeOfAnalysis" = "biodiversity",
-    "weights" = data.frame(stream = c('stream3', 'stream4', 'stream5'),
+    "weights" = data.table(stream = c('stream3', 'stream4', 'stream5'),
                            weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
   ),
   priorityPlaces = list(".useCache" = FALSE,
@@ -130,10 +134,14 @@ objects <- list(predictedPresenceProbability = predictedPresenceProbability,
 
 mySim <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
 
-writeRaster(mySim$priorityAreas[["Year2011"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2011.tif"), format = "GTiff", overwrite = TRUE)
-writeRaster(mySim$priorityAreas[["Year2100"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2100.tif"), format = "GTiff", overwrite = TRUE)
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2011.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2100.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
+writeRaster(mySim$priorityAreas[["Year2011"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2011w.tif"), 
+            format = "GTiff", overwrite = TRUE)
+writeRaster(mySim$priorityAreas[["Year2100"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2100w.tif"), 
+            format = "GTiff", overwrite = TRUE)
+writeRaster(mySim$planningUnitsRaster, file.path(Paths$outputPath, "costBiodiversity_15105.tif"), format = "GTiff", overwrite = TRUE)
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2011w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2100w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
+drive_upload(file.path(Paths$outputPath, "costBiodiversity_15105.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
 
 # _____________________
 
@@ -141,7 +149,7 @@ parameters <- list(
   priorityPlaces_DataPrep = list(
     "stepInterval" = 89,
     "typeOfAnalysis" = "biodiversity",
-    "weights" = data.frame(stream = c('stream3', 'stream4', 'stream5'),
+    "weights" = data.table(stream = c('stream3', 'stream4', 'stream5'),
                            weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
   ),
   priorityPlaces = list(".useCache" = FALSE,
@@ -167,17 +175,19 @@ parameters <- list(
 )
 
 mySim2 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
-writeRaster(mySim2$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30.tif"), format = "GTiff", overwrite = TRUE)
-writeRaster(mySim2$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30.tif"), format = "GTiff", overwrite = TRUE)
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_30_2011.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_30_2100.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
+writeRaster(mySim2$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30w.tif"), 
+            format = "GTiff", overwrite = TRUE)
+writeRaster(mySim2$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30w.tif"), 
+            format = "GTiff", overwrite = TRUE)
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_30_2011w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_30_2100w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
 
 # _____________________
 parameters <- list(
   priorityPlaces_DataPrep = list(
     "stepInterval" = 89,
     "typeOfAnalysis" = "biodiversity",
-    "weights" = data.frame(stream = c('stream3', 'stream4', 'stream5'),
+    "weights" = data.table(stream = c('stream3', 'stream4', 'stream5'),
                            weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
   ),
   priorityPlaces = list(".useCache" = FALSE,
@@ -203,10 +213,12 @@ parameters <- list(
 )
 
 mySim3 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
-writeRaster(mySim3$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2011.tif"), format = "GTiff", overwrite = TRUE)
-writeRaster(mySim3$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2100.tif"), format = "GTiff", overwrite = TRUE)
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_60_2011.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_60_2100.tif"), as_id("1rad2FzocV_-4kN1nRrs9C4TGlyoZ_9-m"))
+writeRaster(mySim3$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2011w.tif"), 
+            format = "GTiff", overwrite = TRUE)
+writeRaster(mySim3$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2100w.tif"), 
+            format = "GTiff", overwrite = TRUE)
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_60_2011w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
+drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_60_2100w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
 
 ```
 
