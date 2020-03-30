@@ -330,7 +330,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           streamsCost <- setdiff(names(stk), matched)
           assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
           sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
-            sim$planningUnit[[paste0("Year", time(sim))]] <- raster::subset(stk, streamsCost)
+          browser()
+          sim$planningUnit[[paste0("Year", time(sim))]] <- raster::subset(stk, streamsCost)
         } else {
           stop("Currenty only 'standard' or 'biodiversity' are accepted as 'typeOfAnalysis'")
         }
