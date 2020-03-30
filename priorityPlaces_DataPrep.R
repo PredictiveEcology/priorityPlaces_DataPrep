@@ -196,9 +196,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       # Create the list placeholders
       sim$speciesStreamsList <- sim$stream1 <- sim$stream2 <- sim$stream3 <-
         sim$stream4 <- sim$stream5 <- sim$featuresID <- list()
-      browser()
-      # if (is.null(sim$planningUnit))
-      #   sim$planningUnit <- list()
 
       # Assertion:
       if (length(P(sim)$diversityIndex) < 1)
@@ -330,7 +327,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           matched <- paste0("stream", P(sim)$featureStreams)
           streamsCost <- setdiff(names(stk), matched)
           assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
-          browser()
           sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
           sim$planningUnit[[paste0("Year", time(sim))]] <- raster::subset(stk, streamsCost)
         } else {
@@ -438,7 +434,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         )
       )
     }
-browser()
+
     if (!suppliedElsewhere("planningUnit", sim)) {
       if (P(sim)$typeOfAnalysis == "standard"){
         message(crayon::red("No planningUnit layer provided.",
@@ -456,7 +452,7 @@ browser()
           stop("Currenty only 'standard' or 'biodiversity' are accepted as 'typeOfAnalysis'")        }
       }
     }
-browser()
+
   if (!suppliedElsewhere("anthropogenicLayer", sim)){
     sim$anthropogenicLayer <- NA
   }
