@@ -133,7 +133,7 @@ outputs <- list()
 objects <- list(predictedPresenceProbability = predictedPresenceProbability,
                 birdPrediction = birdPrediction)
 
-mySim <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
+mySim <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects, loadOrder = unlist(modules))
 
 writeRaster(mySim$priorityAreas[["Year2011"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2011w.tif"), 
             format = "GTiff", overwrite = TRUE)
@@ -180,7 +180,7 @@ parameters <- list(
   )
 )
 
-mySim2 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
+mySim2 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects, loadOrder = unlist(modules))
 writeRaster(mySim2$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30w.tif"), 
             format = "GTiff", overwrite = TRUE)
 writeRaster(mySim2$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30w.tif"), 
@@ -218,7 +218,7 @@ parameters <- list(
   )
 )
 
-mySim3 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
+mySim3 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects, loadOrder = unlist(modules))
 writeRaster(mySim3$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2011w.tif"), 
             format = "GTiff", overwrite = TRUE)
 writeRaster(mySim3$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2100w.tif"), 
