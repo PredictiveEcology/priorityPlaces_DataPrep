@@ -121,7 +121,11 @@ defineModule(sim, list(
     createsOutput(objectName = "stream4", objectClass = "list",
                   desc = paste0("List of species that belong to stream 4 -- lower priority conservation")),
     createsOutput(objectName = "stream5", objectClass = "list",
-                  desc = paste0("List of species that belong to stream 5 -- all others (i.e. migratory birds)"))
+                  desc = paste0("List of species that belong to stream 5 -- all others (i.e. migratory birds)")),
+    createsOutput(objectName = "planningUnitRaster", objectClass = "list",
+                  desc = paste0("List of years with each year's planning unit. If planningUnit[[1]] is ",
+                                " not a raster, it will be NULL (i.e. typeOfAnalysis == 'standard'). ",
+                                "Otherwise, it will be a list of rasters (i.e. typeOfAnalysis == 'biodiversity')"))
   )
 ))
 
@@ -329,6 +333,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
           sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
           sim$planningUnit[[paste0("Year", time(sim))]] <- raster::subset(stk, streamsCost)
+          sim$planningUnitRaster <- sim$planningUnit
         } else {
           stop("Currenty only 'standard' or 'biodiversity' are accepted as 'typeOfAnalysis'")
         }
@@ -434,15 +439,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         )
       )
     }
-print("browser to see about sim$planningUnit and ")
-  browser()
-  if (!suppliedElsewhere("planningUnitRaster", sim = sim)) {
-    if (!is(sim$planningUnit[[1]], "RasterLayer"))
-      stop(paste0("If planningUnit is NOT a RasterLayer ",
-                  "you need to provide planningUnitRaster"))
-    sim$planningUnitRaster <- sim$planningUnit
-  }
-
 
     if (!suppliedElsewhere("planningUnit", sim)) {
       if (P(sim)$typeOfAnalysis == "standard"){
