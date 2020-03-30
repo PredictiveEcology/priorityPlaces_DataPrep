@@ -450,7 +450,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         names(sim$planningUnit[[paste0("Year", start(sim))]]) <- "planningUnit"
       } else {
         if (P(sim)$typeOfAnalysis == "biodiversity"){
-          sim$planningUnit <- NULL
+          sim$planningUnit <- list()
         } else {
           stop("Currenty only 'standard' or 'biodiversity' are accepted as 'typeOfAnalysis'")        }
       }
