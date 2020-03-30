@@ -93,8 +93,8 @@ defineModule(sim, list(
                   sourceURL = NA),
     createsOutput(objectName = "latestYearsDiversity", objectClass = "list",
                   desc = paste0("List of the diversity rasters for each stream2:5")),
-    createsOutput(objectName = "planningUnit", objectClass = "RasterLayer",
-                  desc = paste0("Planning unit is the spatial area (study area) that should be",
+    createsOutput(objectName = "planningUnit", objectClass = "list",
+                  desc = paste0("List of rasters or tables. Planning unit is the spatial area (study area) that should be",
                                 "either a raster or data.frame. If the last, calculations",
                                 " are faster. If the last, each row in the planning unit table must",
                                 " correspond to a different planning unit. The table must also have ",
@@ -438,7 +438,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         )
       )
     }
-
+browser()
     if (!suppliedElsewhere("planningUnit", sim)) {
       if (P(sim)$typeOfAnalysis == "standard"){
         message(crayon::red("No planningUnit layer provided.",
@@ -456,7 +456,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           stop("Currenty only 'standard' or 'biodiversity' are accepted as 'typeOfAnalysis'")        }
       }
     }
-
+browser()
   if (!suppliedElsewhere("anthropogenicLayer", sim)){
     sim$anthropogenicLayer <- NA
   }
