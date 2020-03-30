@@ -12,7 +12,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = deparse(list("README.txt", "priorityPlaces_DataPrep.Rmd")),
-  reqdPkgs = list("assertthat", "crayon", "googledrive", "raster",
+  reqdPkgs = list("assertthat", "crayon", "data.table", "googledrive", "raster",
                   "PredictiveEcology/pemisc@development",
                   "tati-micheletti/usefun", "vegan"),
   parameters = rbind(
@@ -352,7 +352,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           if (is(P(sim)$weights, "data.table")) {
             weights <- P(sim)$weights
             normalized <- raster::stack(lapply(weights[, stream], function(st) {
-              normWeighted <- normalized[[st]] * weights[stream == st, weights]
+              normWeighted <- normalized[[st]] * weights[stream == st, weight]
               return(normWeighted)
             }))
           } else {
