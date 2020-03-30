@@ -332,6 +332,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           streamsCost <- setdiff(names(stk), matched)
           if (!is.na(P(sim)$weights))
             assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
+          print("Save sim$planningUnit and sim$featuresID -- '14wS_HmgrJPoQpORRutp538fyuIRGI4mC'")
+          browser()
           sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
           sim$planningUnit[[paste0("Year", time(sim))]] <- raster::subset(stk, streamsCost)
           sim$planningUnitRaster <- sim$planningUnit
