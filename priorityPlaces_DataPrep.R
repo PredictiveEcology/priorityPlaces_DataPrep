@@ -196,6 +196,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       # Create the list placeholders
       sim$speciesStreamsList <- sim$stream1 <- sim$stream2 <- sim$stream3 <-
         sim$stream4 <- sim$stream5 <- sim$featuresID <- list()
+      if (is.null(sim$planningUnit))
+        sim$planningUnit <- list()
 
       # Assertion:
       if (length(P(sim)$diversityIndex) < 1)
@@ -328,7 +330,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           streamsCost <- setdiff(names(stk), matched)
           assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
           sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
-            sim$planningUnit <- raster::subset(stk, streamsCost)
+            sim$planningUnit[[paste0("Year", time(sim))]] <- raster::subset(stk, streamsCost)
         } else {
           stop("Currenty only 'standard' or 'biodiversity' are accepted as 'typeOfAnalysis'")
         }
@@ -346,7 +348,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
 
       if (P(sim)$typeOfAnalysis == "biodiversity") {
         # 1. Normalize cost layers so I can apply the weight
-        normalized <- normalizeStackTM(raster::stack(sim$planningUnit))
+        normalized <- normalizeStackTM(raster::stack(sim$planningUnit[[paste0("Year", time(sim))]]))
         # 2. Apply the weight and sum all
         if (!is.null(P(sim)$weights)){
           if (is(P(sim)$weights, "data.table")) {
@@ -364,13 +366,13 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         normalized <- normalizeStack(normalized)
         names(normalized) <- paste0("Year", time(sim))
         # 4. Subtract from 1
-        sim$planningUnit <- 1 - normalized[[paste0("Year", time(sim))]]
+        sim$planningUnit[[paste0("Year", time(sim))]] <- 1 - normalized[[paste0("Year", time(sim))]]
         # Remove from planningUnit the anthropogenic disturbance
         if (is(sim$anthropogenicLayer, "RasterLayer")){
           # assertion
-          assertthat::assert_that(is(raster::stack(sim$anthropogenicLayer, sim$planningUnit), "RasterStack"),
+          assertthat::assert_that(is(raster::stack(sim$anthropogenicLayer, sim$planningUnit[[paste0("Year", time(sim))]]), "RasterStack"),
                                   msg = "planningUnit and anthropogenicLayer do not align. Please debug")
-          sim$planningUnit[which(!is.na(raster::getValues(sim$anthropogenicLayer)))] <- NA
+          sim$planningUnit[[paste0("Year", time(sim))]][which(!is.na(raster::getValues(sim$anthropogenicLayer)))] <- NA
         }
       }
 
@@ -442,8 +444,9 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
                             "(the whole are, excl. water bodies)"))
         booBasedPU <- sim$predictedPresenceProbability[[1]][[1]]
         booBasedPU[!is.na(booBasedPU)] <- 0
-        sim$planningUnit <- booBasedPU
-        names(sim$planningUnit) <- "planningUnit"
+        sim$planningUnit <- list(booBasedPU)
+        names(sim$planningUnit) <- paste0("Year", start(sim))
+        names(sim$planningUnit[[paste0("Year", start(sim))]]) <- "planningUnit"
       } else {
         if (P(sim)$typeOfAnalysis == "biodiversity"){
           sim$planningUnit <- NULL
