@@ -139,10 +139,15 @@ writeRaster(mySim$priorityAreas[["Year2011"]][["solution_1"]], file.path(Paths$o
             format = "GTiff", overwrite = TRUE)
 writeRaster(mySim$priorityAreas[["Year2100"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2100w.tif"), 
             format = "GTiff", overwrite = TRUE)
-writeRaster(mySim$planningUnitsRaster, file.path(Paths$outputPath, "costBiodiversity_15105.tif"), format = "GTiff", overwrite = TRUE)
+writeRaster(mySim$planningUnit[["Year2011"]], file.path(Paths$outputPath, "costBiodiversity_2011_15105.tif"), 
+            format = "GTiff", overwrite = TRUE)
+writeRaster(mySim$planningUnit[["Year2100"]], file.path(Paths$outputPath, "costBiodiversity_2100_15105.tif"), 
+            format = "GTiff", overwrite = TRUE)
+
 drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2011w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
 drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2100w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
-drive_upload(file.path(Paths$outputPath, "costBiodiversity_15105.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
+drive_upload(file.path(Paths$outputPath, "costBiodiversity_2011_15105.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
+drive_upload(file.path(Paths$outputPath, "costBiodiversity_2100_15105.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
 
 # _____________________
 
