@@ -348,12 +348,16 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         # 1. Normalize cost layers so I can apply the weight
         normalized <- normalizeStackTM(raster::stack(sim$planningUnit))
         # 2. Apply the weight and sum all
-        if (is(P(sim)$weights, "data.table")) {
-          weights <- P(sim)$weights
-          normalized <- raster::stack(lapply(weights[, stream], function(st) {
-            normWeighted <- normalized[[st]] * weights[stream == st, weights]
-            return(normWeighted)
-          }))
+        if (!is.null(P(sim)$weights)){
+          if (is(P(sim)$weights, "data.table")) {
+            weights <- P(sim)$weights
+            normalized <- raster::stack(lapply(weights[, stream], function(st) {
+              normWeighted <- normalized[[st]] * weights[stream == st, weights]
+              return(normWeighted)
+            }))
+          } else {
+           stop("Weight needs to be provided as a data.table")
+          }
         }
         normalized <- raster::calc(normalized, fun = sum)
         # 3. Normalize again
