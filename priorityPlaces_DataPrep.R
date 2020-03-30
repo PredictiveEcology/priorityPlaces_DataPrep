@@ -353,6 +353,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         # 1. Normalize cost layers so I can apply the weight
         normalized <- normalizeStackTM(raster::stack(sim$planningUnit[[paste0("Year", time(sim))]]))
         # 2. Apply the weight and sum all
+        browser()
         if (!is.null(P(sim)$weights)){
           if (is(P(sim)$weights, "data.table")) {
             weights <- P(sim)$weights
