@@ -330,7 +330,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         if (P(sim)$typeOfAnalysis == "biodiversity") {
           matched <- paste0("stream", P(sim)$featureStreams)
           streamsCost <- setdiff(names(stk), matched)
-          assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
+          if (!is.na(P(sim)$weights))
+            assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
           sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
           sim$planningUnit[[paste0("Year", time(sim))]] <- raster::subset(stk, streamsCost)
           sim$planningUnitRaster <- sim$planningUnit
@@ -353,8 +354,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         # 1. Normalize cost layers so I can apply the weight
         normalized <- normalizeStackTM(raster::stack(sim$planningUnit[[paste0("Year", time(sim))]]))
         # 2. Apply the weight and sum all
-        browser()
-        if (!is.null(P(sim)$weights)){
+        if (!is.na(P(sim)$weights)){
           if (is(P(sim)$weights, "data.table")) {
             weights <- P(sim)$weights
             normalized <- raster::stack(lapply(weights[, stream], function(st) {
