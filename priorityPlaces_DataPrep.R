@@ -54,22 +54,15 @@ defineModule(sim, list(
                  sourceURL = "https://drive.google.com/open?id=1zj7zo8NBNhxxHMUL4ZnKTaP3niuQEI1m"),
     expectsInput(objectName = "birdPrediction", objectClass = "list",
                  desc = "List per year of the bird species predicted rasters", sourceURL = NA),
-    expectsInput(objectName = "importantAreas", objectClass = "RasterLayer | shapefile",
+    expectsInput(objectName = "importantAreas", objectClass = "RasterLayer",
                  desc = paste0("Raster of areas that are of importance for one or more species, ",
                                "(i.e. coming from Indigenous knowldge)",
                                " planningUnit id correspond to penalize solutions that chose these",
                                "This will be filtered for non-na values (i.e. important are = 1,",
                                "non-important areas need to be 0"), sourceURL = NA),
     expectsInput(objectName = "planningUnit", objectClass = "RasterLayer",
-                 desc = paste0("Planning unit is the spatial area (study area) that should be",
-                               "either a raster or data.frame. If the last, calculations",
-                               " are faster. If the last, each row in the planning unit table must",
-                               " correspond to a different planning unit. The table must also have ",
-                               " an 'id' column to provide a unique integer identifier for each",
-                               " planning unit (i.e. pixelID -- used as `pu` in featuresData. see below),",
-                               " and it must also have columns wit xloc, yloc, and one that",
-                               " indicates the cost of each planning unit ('cost'). If the first, the module",
-                               " will convert it to data.frame with the necessary adjustments"), sourceURL = NA),
+                 desc = paste0("List of rasters (one for each time unit). Planning unit is the spatial area (study area) that should be",
+                               " a raster."), sourceURL = NA),
     expectsInput(objectName = "predictedPresenceProbability", objectClass = "list",
                  desc =  paste0("List of rasters per year, indicating habitat quality ",
                                 "index for presence of Caribous"), sourceURL = NA),
@@ -79,11 +72,8 @@ defineModule(sim, list(
   ),
   outputObjects = bind_rows(
     createsOutput(objectName = "featuresID", objectClass = "rasterStack",
-                 desc = paste0("This is the rasterStack or relative data.frame of the features to be ",
-                               "assessed: caribouRSF, specific birds density, species richness, etc",
-                               "If a data.frame, feature data must have an 'id' column containing ",
-                               "a unique identifier (i.e. matching 'species' in featuresData), and `name`",
-                               " character name for each feature.")),
+                 desc = paste0("This is the rasterStack of the features to be ",
+                               "assessed: caribouRSF, specific birds density, species richness, etc")),
     createsOutput(objectName = "importantAreas", objectClass = "RasterLayer",
                   desc = paste0("Raster of areas that are of importance for one or more species, ",
                                 "(i.e. coming from Indigenous knowldge)",
@@ -94,15 +84,8 @@ defineModule(sim, list(
     createsOutput(objectName = "latestYearsDiversity", objectClass = "list",
                   desc = paste0("List of the diversity rasters for each stream2:5")),
     createsOutput(objectName = "planningUnit", objectClass = "list",
-                  desc = paste0("List of rasters or tables. Planning unit is the spatial area (study area) that should be",
-                                "either a raster or data.frame. If the last, calculations",
-                                " are faster. If the last, each row in the planning unit table must",
-                                " correspond to a different planning unit. The table must also have ",
-                                " an 'id' column to provide a unique integer identifier for each",
-                                " planning unit (i.e. pixelID -- used as `pu` in featuresData. see below),",
-                                " and it must also have columns wit xloc, yloc, and one that",
-                                " indicates the cost of each planning unit ('cost'). If the first, the module",
-                                " will convert it to data.frame with the necessary adjustments")),
+                  desc = paste0("List of rasters (one for each time unit). Planning unit is the spatial area (study area) that should be",
+                                " a raster.")),
     createsOutput(objectName = "protectedAreas", objectClass = "RasterLayer",
                  desc = paste0("Raster of protected areas, it will filter for non-na values (i.e. all but protected areas need",
                                "to be NA")),
@@ -121,11 +104,7 @@ defineModule(sim, list(
     createsOutput(objectName = "stream4", objectClass = "list",
                   desc = paste0("List of species that belong to stream 4 -- lower priority conservation")),
     createsOutput(objectName = "stream5", objectClass = "list",
-                  desc = paste0("List of species that belong to stream 5 -- all others (i.e. migratory birds)")),
-    createsOutput(objectName = "planningUnitRaster", objectClass = "list",
-                  desc = paste0("List of years with each year's planning unit. If planningUnit[[1]] is ",
-                                " not a raster, it will be NULL (i.e. typeOfAnalysis == 'standard'). ",
-                                "Otherwise, it will be a list of rasters (i.e. typeOfAnalysis == 'biodiversity')"))
+                  desc = paste0("List of species that belong to stream 5 -- all others (i.e. migratory birds)"))
   )
 ))
 
@@ -332,11 +311,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           streamsCost <- setdiff(names(stk), matched)
           if (!is.na(P(sim)$weights))
             assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
-          print("Save sim$planningUnit and sim$featuresID -- '14wS_HmgrJPoQpORRutp538fyuIRGI4mC'")
-          browser()
           sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
           sim$planningUnit[[paste0("Year", time(sim))]] <- raster::subset(stk, streamsCost)
-          sim$planningUnitRaster <- sim$planningUnit
         } else {
           stop("Currenty only 'standard' or 'biodiversity' are accepted as 'typeOfAnalysis'")
         }
