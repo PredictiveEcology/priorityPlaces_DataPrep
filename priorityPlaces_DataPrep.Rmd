@@ -38,8 +38,7 @@ options(reproducible.cacheSaveFormat = "rds")
 
 setPaths(modulePath = file.path(getwd(), "modules"),
          inputPath = file.path(getwd(), "inputs"),
-         cachePath = file.path(getwd(), "cache"),
-         outputPath = file.path(getwd(), "outputs"))
+         cachePath = file.path(getwd(), "cache"))
 getPaths() # shows where the 4 relevant paths are
 options(reproducible.showSimilar = FALSE)
 times <- list(start = 2011, end = 2100)
@@ -100,10 +99,7 @@ predictedPresenceProbability <- list(Year2011 = caribous2011,
 parameters <- list(
   priorityPlaces_DataPrep = list(
     "stepInterval" = 89,
-    "typeOfAnalysis" = "biodiversity",
-    "weights" = data.table(stream = c('stream3', 'stream4', 'stream5'),
-                           weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
-  ),
+    "typeOfAnalysis" = "biodiversity"),
   priorityPlaces = list(".useCache" = FALSE,
                         "stepInterval" = 89,
                         "binaryDecision" = FALSE,
@@ -126,105 +122,82 @@ parameters <- list(
   )
 )
 
-modules <- list("priorityPlaces_DataPrep", "priorityPlaces")
+modules <- list("priorityPlaces_DataPrep")
+
 inputs <- list()
 outputs <- list()
 
 objects <- list(predictedPresenceProbability = predictedPresenceProbability,
                 birdPrediction = birdPrediction)
+outputsToSave <- data.frame(objectName = rep(c("planningUnit", "featuresID")),
+                            saveTime = 2100)
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights"), create = TRUE))
+noWeights <- simInitAndSpades(times = times, params = parameters, modules = modules,
+                          objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
 
-mySim <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects, loadOrder = unlist(modules))
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105"), create = TRUE))
+parameters$priorityPlaces_DataPrep$weights <- data.table(stream = c('stream3', 'stream4', 'stream5'),
+                                                         weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
+withWeights <- simInitAndSpades(times = times, params = parameters, modules = modules,
+                          objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
 
-writeRaster(mySim$priorityAreas[["Year2011"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2011w.tif"), 
-            format = "GTiff", overwrite = TRUE)
-writeRaster(mySim$priorityAreas[["Year2100"]][["solution_1"]], file.path(Paths$outputPath, "priorityAreas_stream1_15_2100w.tif"), 
-            format = "GTiff", overwrite = TRUE)
-writeRaster(mySim$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "costBiodiversity_2011_15105.tif"), 
-            format = "GTiff", overwrite = TRUE)
-writeRaster(mySim$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "costBiodiversity_2100_15105.tif"), 
-            format = "GTiff", overwrite = TRUE)
+# No weights
+# PriorityPlaces
+objects <- list(planningUnit = readRDS(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/planningUnit_year2100.rds")),
+                featuresID = readRDS(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/featuresID_year2100.rds")))
+modules <- list("priorityPlaces")
+outputsToSave <- data.frame(objectName = "priorityAreas")
 
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2011w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_15_2100w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
-drive_upload(file.path(Paths$outputPath, "costBiodiversity_2011_15105.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
-drive_upload(file.path(Paths$outputPath, "costBiodiversity_2100_15105.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
+setPaths(outputPath  = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/target15_noWeight"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.15, 0.2) ## streams 1, 2
+target15_noW <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules), 
+                           outputs = outputsToSave)
+# _____________________
+
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/target30_noWeight"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.3, 0.2) ## streams 1, 2
+target30_noW <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules),
+                           outputs = outputsToSave)
 
 # _____________________
 
-parameters <- list(
-  priorityPlaces_DataPrep = list(
-    "stepInterval" = 89,
-    "typeOfAnalysis" = "biodiversity",
-    "weights" = data.table(stream = c('stream3', 'stream4', 'stream5'),
-                           weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
-  ),
-  priorityPlaces = list(".useCache" = FALSE,
-                        "stepInterval" = 89,
-                        "binaryDecision" = FALSE,
-                        "constraintType" = list(
-                          #add_locked_in_constraints = list(locked_in = c(50, 53, 52, 51)),
-                          #add_feature_contiguity_constraints = NULL,
-                          #add_neighbor_constraints = list(k = 2),
-                          #add_locked_out_constraints = list(locked_out = c(3, 4, 13, 14))
-                        ),
-                        "fasterOptimization" = TRUE,
-                        "firstFeasible" = FALSE,
-                        "penalty" = NULL, ## used to penalize highly fragmented solutions
-                        "presolve" = 2,
-                        "solutions" = 1, ## converges on a single solution already
-                        "solver" = "gurobi", ## change accordingly
-                        "targets" = c(0.3, 0.2), ## streams 1, 2
-                        "timeLimit" = 1800,
-                        "verbose" = TRUE,
-                        ".plotInitialTime" = NA
-  )
-)
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/target60_noWeight"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.6, 0.2) ## streams 1, 2
+target60_noW <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules),
+                           outputs = outputsToSave)
+# _____________________
 
-mySim2 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects, loadOrder = unlist(modules))
-writeRaster(mySim2$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30w.tif"), 
-            format = "GTiff", overwrite = TRUE)
-writeRaster(mySim2$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_30w.tif"), 
-            format = "GTiff", overwrite = TRUE)
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_30_2011w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_30_2100w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
+
+# Weights
+# PriorityPlaces
+objects <- list(planningUnit = readRDS(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/planningUnit_year2100.rds")),
+                featuresID = readRDS(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/featuresID_year2100.rds")))
+
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/target15_weights15105"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.15, 0.2) ## streams 1, 2
+mySim <- simInitAndSpades(times = times, params = parameters, modules = modules,
+                          objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
+# _____________________
+
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/target30_weights15105"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.3, 0.2) ## streams 1, 2
+mySim2 <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
 
 # _____________________
-parameters <- list(
-  priorityPlaces_DataPrep = list(
-    "stepInterval" = 89,
-    "typeOfAnalysis" = "biodiversity",
-    "weights" = data.table(stream = c('stream3', 'stream4', 'stream5'),
-                           weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
-  ),
-  priorityPlaces = list(".useCache" = FALSE,
-                        "stepInterval" = 89,
-                        "binaryDecision" = FALSE,
-                        "constraintType" = list(
-                          #add_locked_in_constraints = list(locked_in = c(50, 53, 52, 51)),
-                          #add_feature_contiguity_constraints = NULL,
-                          #add_neighbor_constraints = list(k = 2),
-                          #add_locked_out_constraints = list(locked_out = c(3, 4, 13, 14))
-                        ),
-                        "fasterOptimization" = TRUE,
-                        "firstFeasible" = FALSE,
-                        "penalty" = NULL, ## used to penalize highly fragmented solutions
-                        "presolve" = 2,
-                        "solutions" = 1, ## converges on a single solution already
-                        "solver" = "gurobi", ## change accordingly
-                        "targets" = c(0.6, 0.2), ## streams 1, 2
-                        "timeLimit" = 1800,
-                        "verbose" = TRUE,
-                        ".plotInitialTime" = NA
-  )
-)
 
-mySim3 <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects, loadOrder = unlist(modules))
-writeRaster(mySim3$priorityAreas[["Year2011"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2011w.tif"), 
-            format = "GTiff", overwrite = TRUE)
-writeRaster(mySim3$priorityAreas[["Year2100"]][[1]], file.path(Paths$outputPath, "priorityAreas_stream1_60_2100w.tif"), 
-            format = "GTiff", overwrite = TRUE)
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_60_2011w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
-drive_upload(file.path(Paths$outputPath, "priorityAreas_stream1_60_2100w.tif"), as_id("18GOo_q0nIsKYxzhpHtCrrenFAXQRlv-D"))
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/target60_weights15105"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.6, 0.2) ## streams 1, 2
+mySim3 <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
 
 ```
 
