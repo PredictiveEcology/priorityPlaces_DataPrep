@@ -14,7 +14,7 @@ defineModule(sim, list(
   documentation = deparse(list("README.txt", "priorityPlaces_DataPrep.Rmd")),
   reqdPkgs = list("assertthat", "crayon", "data.table", "googledrive", "raster",
                   "PredictiveEcology/pemisc@development",
-                  "tati-micheletti/usefun", "vegan"),
+                  "tati-micheletti/usefulFuns", "vegan"),
   parameters = rbind(
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA,
                     "Describes the simulation time at which the first plot event should occur."),
@@ -198,7 +198,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       speciesWeWant <- Cache(prepInputs, url = url, filename2 = NULL,
                              destinationPath = dataPath(sim), fun = "readRDS") # ==> streams file
       speciesWeHaveAll <- Cache(drive_ls, as_id("1DD2lfSsVEOfHoob3fKaTvqOjwVG0ZByQ"), recursive = FALSE)
-      speciesWeHave <- usefun::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"),
+      speciesWeHave <- usefulFuns::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"),
                                           howManyCharacters = 4, fromEnd = FALSE)
 
       speciesWeWant_Vec <- speciesWeWant$SPEC
@@ -246,7 +246,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       })
       # Check other species we have
       speciesWeHaveAll <- Cache(drive_ls, as_id("1DD2lfSsVEOfHoob3fKaTvqOjwVG0ZByQ"), recursive = FALSE)
-      speciesWeHave <- usefun::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"), howManyCharacters = 4, fromEnd = FALSE)
+      speciesWeHave <- usefulFuns::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"), howManyCharacters = 4, fromEnd = FALSE)
       migratorySpecies <- speciesWeHave[!speciesWeHave %in% names(thisYearsBirds)]
       # names(birdPrediction[[paste0("Year", time(sim))]])[!names(birdPrediction[[paste0("Year", time(sim))]]) %in% names(thisYearsBirds)]
 

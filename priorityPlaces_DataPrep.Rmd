@@ -27,7 +27,7 @@ library("raster")
 library("reproducible")
 library("SpaDES.core")
 library("SpaDES.tools")
-library("usefun")
+library("usefulFuns")
 library("googledrive")
 library("data.table")
 
@@ -48,14 +48,14 @@ times <- list(start = 2011, end = 2100)
 # features: 0.15, 0.30, 0.60
 
 #==================# Load Data #==========================
-birdsOutputsFolder <- "/mnt/data/Micheletti/NWT/outputs/2019/18JUL19/birdPredictionsV3" # 2011 and 2100 (convert 2021 into 2011)
-caribouOutputsFolder <- "/mnt/data/Micheletti/NWT/outputs/2019/18JUN19_CS_SCFM/caribouRSF" #  2011 and 2100
-library("usefun")
+birdsOutputsFolder <- "~/outputs/2019/18JUL19/birdPredictionsV3" # 2011 and 2100 (convert 2021 into 2011)
+caribouOutputsFolder <- "~/outputs/2019/18JUN19_CS_SCFM/caribouRSF" #  2011 and 2100
+library("usefulFuns")
 
 # Birds VERSION3: birdsOutputsFolder
 allBirdsPaths <- list.files(path = birdsOutputsFolder, pattern = "2021.tif|2100.tif", full.names = TRUE)
 allBirdsPaths2011 <- grepMulti(x = allBirdsPaths, patterns = "2021")
-allBirdsNames <- usefun::substrBoth(usefun::substrBoth(strng = tools::file_path_sans_ext(allBirdsPaths2011), 
+allBirdsNames <- usefulFuns::substrBoth(usefulFuns::substrBoth(strng = tools::file_path_sans_ext(allBirdsPaths2011), 
                                     howManyCharacters = 12, fromEnd = TRUE), howManyCharacters = 4, fromEnd = FALSE) 
 allBirdsPaths2100 <- grepMulti(x = allBirdsPaths, patterns = "2100")
 birds2011 <- lapply(X = 1:length(allBirdsPaths2011), FUN = function(index){
