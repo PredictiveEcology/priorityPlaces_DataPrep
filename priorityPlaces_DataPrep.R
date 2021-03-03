@@ -74,7 +74,7 @@ defineModule(sim, list(
                  desc = paste0("Raster of protected areas, it will filter for non-na values",
                                " (i.e. all but protected areas need to be NA"), sourceURL = NA)
   ),
-  outputObjects = bind_rows(
+  outputObjects = bindrows(
     createsOutput(objectName = "featuresID", objectClass = "rasterStack",
                  desc = paste0("This is the rasterStack of the features to be ",
                                "assessed: caribouRSF, specific birds density, species richness, etc")),
