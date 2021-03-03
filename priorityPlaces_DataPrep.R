@@ -44,14 +44,18 @@ defineModule(sim, list(
                           "Biodiversity loss cost analysis: 'biodiversity'.")),
     defineParameter("weights", "data.table", NA, NA, NA,
                     paste("Only used for typeOfAnalysis == biodiversity.",
-                          "Data.frame with colunm 'stream' = c('stream3', 'stream4', 'stream5') and",
+                          "Data.table with colunm 'stream' = c('stream3', 'stream4', 'stream5') and",
                           "'weight' of each stream that composes the cost",
-                          "of the planningUnit. Default to NA, which ignores weights for all layers"))
+                          "of the planningUnit. Default to NA, which ignores weights for all layers")),
+    defineParameter("predictionYears", "numeric", c(2031, 2051, 2071), NA, NA,
+                    paste0("Years for which this module should run. ",
+                           "These years should match the data ",
+                           "(streams) are available"))
   ),
   inputObjects = bind_rows(
-    expectsInput(objectName = "anthropogenicLayer", objectClass = "RasterLayer",
+    expectsInput(objectName = "anthropogenicLayer_PP", objectClass = "RasterLayer",
                  desc = "Raster with road buffered disturbances. Can be replaced by a more complete layer",
-                 sourceURL = "https://drive.google.com/open?id=1zj7zo8NBNhxxHMUL4ZnKTaP3niuQEI1m"),
+                 sourceURL = NA),
     expectsInput(objectName = "birdPrediction", objectClass = "list",
                  desc = "List per year of the bird species predicted rasters", sourceURL = NA),
     expectsInput(objectName = "importantAreas", objectClass = "RasterLayer",
@@ -115,7 +119,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
   switch(
     eventType,
     init = {
-      # 1. Check that birdPrediction and predictedPresenceProbability stack. If not, postProcess one of these ( [ FIX ] to be added later)
+      # 1. Check that birdPrediction and predictedPresenceProbability stack.
+      # If not, postProcess one of these ( [ FIX ] to be added later)
       # TODO
       tryCatch({
         stkBirs <- raster::stack(unlist(sim$birdPrediction))
@@ -182,31 +187,43 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
 
       # Assertion:
       if (length(P(sim)$diversityIndex) < 1)
-        stop("You have to provide at least one index to be calculated: 'shannon', 'simpson' (i.e. simpson is the inverted version)")
+        stop("You have to provide at least one index to be calculated:
+             'shannon', 'simpson' (i.e. simpson is the inverted version)")
+
+      # Create counter
+      mod$.schedulingCounter <- 1
 
       # schedule future event(s)
-      sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "assignStream", eventPriority = .first())
-      sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "prepreStreamStack", eventPriority = .first())
-      sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "calculateStreamDiversity", eventPriority = .first())
-      sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "addMissingStreams", eventPriority = .first())
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                           "priorityPlaces_DataPrep", "assignStream", eventPriority = .first())
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                           "priorityPlaces_DataPrep", "prepStreamStack", eventPriority = .first())
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                           "priorityPlaces_DataPrep", "calculateStreamDiversity", eventPriority = .first())
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                           "priorityPlaces_DataPrep", "addMissingStreams", eventPriority = .first())
       if (any(P(sim)$normalizeRasters, P(sim)$typeOfAnalysis == "biodiversity"))
-        sim <- scheduleEvent(sim, time(sim), "priorityPlaces_DataPrep", "normalizingFeatures", eventPriority = .first())
+        sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                             "priorityPlaces_DataPrep", "normalizingFeatures", eventPriority = .first())
+      if (any(!is.na(P(sim)$weights)))
+        sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                             "priorityPlaces_DataPrep", "updateFeatureWeights", eventPriority = .first())
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                           "priorityPlaces_DataPrep", "updateScheduler", eventPriority = .last())
     },
     assignStream = {
       # 1. Get the names of the birdPrediction and allocate these into streams
       url <- "https://drive.google.com/file/d/17OiIWC5oJcP2Y0cXMJH_KUWmYJrhR-dn/view?usp=sharing"
+      message("Loading species streams...")
       speciesWeWant <- Cache(prepInputs, url = url, filename2 = NULL,
                              destinationPath = dataPath(sim), fun = "readRDS") # ==> streams file
-      speciesWeHaveAll <- Cache(drive_ls, as_id("1DD2lfSsVEOfHoob3fKaTvqOjwVG0ZByQ"), recursive = FALSE)
-      speciesWeHave <- usefulFuns::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"),
-                                          howManyCharacters = 4, fromEnd = FALSE)
-
-      speciesWeWant_Vec <- speciesWeWant$SPEC
-      commonSp <- speciesWeWant_Vec[speciesWeWant_Vec %in% speciesWeHave]
-      sim$speciesStreams <- speciesWeWant[SPEC %in% commonSp, c("SPEC", "Management Stream")]
-
+      speciesWeHave <- unique(unlist(lapply(sim$birdPrediction, names)))
+      sim$speciesStreams <- speciesWeWant[SPEC %in% speciesWeHave, c("SPEC", "Management Stream")]
+      lastStream <- data.table("SPEC" = setdiff(speciesWeHave, sim$speciesStreams[["SPEC"]]),
+                               "Management Stream" = max(sim$speciesStreams[["Management Stream"]])+1)
+      sim$speciesStreams <- rbind(sim$speciesStreams, lastStream)
     },
-    prepreStreamStack = {
+    prepStreamStack = {
       # 2. For the specific year, grab all the birds layers and assign them to a list of streams
       thisYearsBirds <- sim$birdPrediction[[paste0("Year", time(sim))]]
       birdSpecies <- names(thisYearsBirds)
@@ -214,7 +231,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         birdRas <- thisYearsBirds[[BIRD]]
         stream <- as.numeric(sim$speciesStreams[SPEC == BIRD, "Management Stream"])
         if (is.na(stream))
-          stream <- 5
+          stream <- max(sim$speciesStreams[["Management Stream"]], na.rm = TRUE) + 1
         names(birdRas) <- paste0(BIRD, "_", time(sim))
         if (stream == 1){
           birdRas <- list(birdRas)
@@ -244,12 +261,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           }
         }
       })
-      # Check other species we have
-      speciesWeHaveAll <- Cache(drive_ls, as_id("1DD2lfSsVEOfHoob3fKaTvqOjwVG0ZByQ"), recursive = FALSE)
-      speciesWeHave <- usefulFuns::substrBoth(grepMulti(speciesWeHaveAll$name, patterns = "brt6.R"), howManyCharacters = 4, fromEnd = FALSE)
-      migratorySpecies <- speciesWeHave[!speciesWeHave %in% names(thisYearsBirds)]
-      # names(birdPrediction[[paste0("Year", time(sim))]])[!names(birdPrediction[[paste0("Year", time(sim))]]) %in% names(thisYearsBirds)]
-
       sim$speciesStreamsList[[paste0("Year", time(sim))]] <- list(
         stream1 = sim$stream1[[paste0("Year", time(sim))]],
         stream2 = sim$stream2[[paste0("Year", time(sim))]],
@@ -261,33 +272,41 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY
 
       # Schedule future events
-      sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "prepreStreamStack")
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter + 1]),
+                           "priorityPlaces_DataPrep", "prepStreamStack")
     },
     calculateStreamDiversity = {
       # 2. For the specific year, calculate stream diversity
       sim$latestYearsDiversity <- lapply(names(sim$speciesStreamsList[[paste0("Year", time(sim))]]), function(stream) {
         thisYearIndices <- diversityIndices(birdStreamList = sim$speciesStreamsList[[paste0("Year", time(sim))]][[stream]],
-                                            pathOutput = dataPath(sim), currentTime = time(sim), stream = stream)
+                                            pathOutput = Paths[["outputPath"]],
+                                            currentTime = time(sim), stream = stream)
+        # TODO Potentially replace this function with the SpadeR::Diversity().
         return(thisYearIndices)
       })
       names(sim$latestYearsDiversity) <- names(sim$speciesStreamsList[[paste0("Year", time(sim))]])
       # Schedule future events
-      sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "calculateStreamDiversity")
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter + 1]),
+                           "priorityPlaces_DataPrep", "calculateStreamDiversity")
     },
     addMissingStreams = {
       # 3. For the specific year, add the missing stream 1 (i.e. caribou)
       thisYearCaribou <- sim$predictedPresenceProbability[[paste0("Year", time(sim))]]
       caribouRSFuncertain <- grepMulti(names(thisYearCaribou), patterns = "Uncertain")
-      caribouRSFname <- setdiff(names(thisYearCaribou), caribouRSFuncertain) # TODO: Test with adding caribou to a stream that has one bird already
+      caribouRSFname <- setdiff(names(thisYearCaribou), caribouRSFuncertain)
+      # TODO: Test with adding caribou to a stream that has one bird already
+      # First, add stream1
       nms <- names(sim$stream1[[paste0("Year", time(sim))]])
       sim$stream1[[paste0("Year", time(sim))]] <- c(sim$stream1[[paste0("Year", time(sim))]],
                                                     thisYearCaribou[[caribouRSFname]])
       names(sim$stream1[[paste0("Year", time(sim))]]) <- c(nms, "stream1")
       sim$latestYearsDiversity <- c(sim$stream1[[paste0("Year", time(sim))]], sim$latestYearsDiversity)
+      # Then check for missing streams
       missingStreams <- setdiff(paste0("stream", 1:5), names(sim$latestYearsDiversity))
       if (!is.null(missingStreams)) {
         missingRas <- lapply(missingStreams, function(mssStr) {
           zeroedRas <- raster::setValues(sim$stream1[[paste0("Year", time(sim))]][[1]], 0)
+          message("Making zeroed layer, Cached object is fine here")
           ras <- Cache(postProcess, x = zeroedRas, # It is zeroed so it doesn't add anything to the features, but can be passed
                        rasterToMatch =  sim$stream1[[paste0("Year", time(sim))]][[1]],
                        maskWithRTM = TRUE, filename2 = NULL,
@@ -300,8 +319,11 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         })
         names(missingRas) <- missingStreams
       }
-      # Here I expect to have all stream layers, from 1 to 5. If there is one I don't have originally, it should be here as zero
-      stk <- raster::stack(c(sim$latestYearsDiversity, missingRas))
+      # Here I expect to have all stream layers, from 1 to 5.
+      # If there is one I don't have originally, it should be here as zero
+      nm <- c(names(sim$latestYearsDiversity), names(missingRas))
+      stk <- raster::stack(c(unlist(sim$latestYearsDiversity), missingRas))
+      names(stk) <- nm
       matched <- match(paste0("stream", 1:5), names(stk))
       if (P(sim)$typeOfAnalysis == "standard") {
         sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
@@ -309,8 +331,15 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         if (P(sim)$typeOfAnalysis == "biodiversity") {
           matched <- paste0("stream", P(sim)$featureStreams)
           streamsCost <- setdiff(names(stk), matched)
-          if (!is.na(P(sim)$weights))
-            assertthat::are_equal(nrow(P(sim)$weights), length(streamsCost))
+          if (any(!is.na(P(sim)$weights))){
+            testthat::expect_true(NROW(P(sim)$weights) == length(streamsCost),
+                                  label = paste0("Please provide weights for all layers.",
+                                                 " Currently, weights are being provided for ",
+                                                 paste(P(sim)$weights[["stream"]], collapse = ", "),
+                                                 " but the following",
+                                                 " layers are expected: ", paste(streamsCost, collapse = ", "),
+                                                 ". Matching weights and stream layers"))
+          }
           sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
           sim$planningUnit[[paste0("Year", time(sim))]] <- raster::subset(stk, streamsCost)
         } else {
@@ -319,20 +348,20 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       }
 
       # Schedule future events
-      sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "addMissingStreams")
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter + 1]),
+                           "priorityPlaces_DataPrep", "addMissingStreams")
     },
     normalizingFeatures = {
       # 4. Normalizing rasters
-      if (P(sim)$normalizeRasters) {
+      if (P(sim)$normalizeRasters){
         rs <- raster::stack(sim$featuresID[[paste0("Year", time(sim))]])
         sim$featuresID[[paste0("Year", time(sim))]] <- normalizeStackTM(rs)
       }
-
       if (P(sim)$typeOfAnalysis == "biodiversity") {
         # 1. Normalize cost layers so I can apply the weight
         normalized <- normalizeStackTM(raster::stack(sim$planningUnit[[paste0("Year", time(sim))]]))
         # 2. Apply the weight and sum all
-        if (!is.na(P(sim)$weights)){
+        if (any(!is.na(P(sim)$weights))){
           if (is(P(sim)$weights, "data.table")) {
             weights <- P(sim)$weights
             normalized <- raster::stack(lapply(weights[, stream], function(st) {
@@ -347,19 +376,46 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         # 3. Normalize again
         normalized <- normalizeStack(normalized)
         names(normalized) <- paste0("Year", time(sim))
-        # 4. Subtract from 1
+        # 4. Subtract from 1: Here we assume that the cost increases with decresed
+        # species diversity (the higher the diversity, the lower the cost to conservation)
         sim$planningUnit[[paste0("Year", time(sim))]] <- 1 - normalized[[paste0("Year", time(sim))]]
         # Remove from planningUnit the anthropogenic disturbance
-        if (is(sim$anthropogenicLayer, "RasterLayer")){
+        if (is(sim$anthropogenicLayer_PP, "RasterLayer")){
           # assertion
-          assertthat::assert_that(is(raster::stack(sim$anthropogenicLayer, sim$planningUnit[[paste0("Year", time(sim))]]), "RasterStack"),
+          assertthat::assert_that(is(raster::stack(sim$anthropogenicLayer_PP,
+                                                   sim$planningUnit[[paste0("Year", time(sim))]]), "RasterStack"),
                                   msg = "planningUnit and anthropogenicLayer do not align. Please debug")
-          sim$planningUnit[[paste0("Year", time(sim))]][which(!is.na(raster::getValues(sim$anthropogenicLayer)))] <- NA
+          sim$planningUnit[[paste0("Year", time(sim))]][!is.na(sim$anthropogenicLayer_PP[])] <- NA
         }
       }
 
       # Schedule future events
-      sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "normalizingFeatures")
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter + 1]),
+                           "priorityPlaces_DataPrep", "normalizingFeatures")
+    },
+    updateFeatureWeights = {
+        if (is(P(sim)$weights, "data.table")) {
+          weights <- P(sim)$weights
+          normalized <- raster::stack(lapply(weights[, stream], function(st) {
+            weightedStream <- sim$featuresID[[paste0("Year", time(sim))]][[st]] * weights[stream == st, weight]
+            return(weightedStream)
+          }))
+        } else {
+          stop("Weight needs to be provided as a data.table")
+        }
+        addUnchangingStream <- setdiff(names(sim$featuresID[[paste0("Year", time(sim))]]), names(normalized))
+        sim$featuresID[[paste0("Year", time(sim))]] <- raster::stack(sim$featuresID[[paste0("Year", time(sim))]][[addUnchangingStream]],
+                                                                     normalized)
+        # Schedule future events
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter + 1]),
+                           "priorityPlaces_DataPrep", "updateFeatureWeights")
+    },
+    updateScheduler = {
+      # First you schedule the event as the previous ones
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter + 1]),
+                          "priorityPlaces_DataPrep", "updateScheduler")
+      # Then you update the counter
+      mod$.schedulingCounter <- mod$.schedulingCounter +1
     },
     warning(paste("Undefined event type: \'", current(sim)[1, "eventType", with = FALSE],
                   "\' in module \'", current(sim)[1, "moduleName", with = FALSE], "\'", sep = ""))
@@ -437,8 +493,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       }
     }
 
-  if (!suppliedElsewhere("anthropogenicLayer", sim)){
-    sim$anthropogenicLayer <- NA
+  if (!suppliedElsewhere("anthropogenicLayer_PP", sim)){
+    sim$anthropogenicLayer_PP <- NA
   }
 
   cacheTags <- c(currentModule(sim), "function:.inputObjects")
