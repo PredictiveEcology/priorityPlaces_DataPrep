@@ -27,26 +27,81 @@ library("raster")
 library("reproducible")
 library("SpaDES.core")
 library("SpaDES.tools")
+library("usefulFuns")
+library("googledrive")
+library("data.table")
 
-scratchDir <- file.path("/mnt/scratch")
+drive_auth("tati.micheletti@gmail.com")
+# scratchDir <- file.path("/mnt/tmp")
 
 options(reproducible.cacheSaveFormat = "rds")
 
-setPaths(modulePath = file.path(dirname(getwd())),
-         inputPath = checkPath(file.path(scratchDir, "TMP_priorityPlacesTest", "inputs"), create = TRUE),
-         outputPath = checkPath(file.path(scratchDir, "TMP_priorityPlacesTest", "outputs"), create = TRUE))
+setPaths(modulePath = file.path(getwd(), "modules"),
+         inputPath = file.path(getwd(), "inputs"),
+         cachePath = file.path(getwd(), "cache"))
 getPaths() # shows where the 4 relevant paths are
-options(reproducible.showSimilar = TRUE)
-times <- list(start = 2001, end = 2100)
+options(reproducible.showSimilar = FALSE)
+times <- list(start = 2011, end = 2100)
 
+# Experiment:
+# Weight unitPlanning with 3 streams: No weight x 1.5, 1, 0.5
+# features: 0.15, 0.30, 0.60
+
+#==================# Load Data #==========================
+birdsOutputsFolder <- "~/outputs/2019/18JUL19/birdPredictionsV3" # 2011 and 2100 (convert 2021 into 2011)
+caribouOutputsFolder <- "~/outputs/2019/18JUN19_CS_SCFM/caribouRSF" #  2011 and 2100
+library("usefulFuns")
+
+# Birds VERSION3: birdsOutputsFolder
+allBirdsPaths <- list.files(path = birdsOutputsFolder, pattern = "2021.tif|2100.tif", full.names = TRUE)
+allBirdsPaths2011 <- grepMulti(x = allBirdsPaths, patterns = "2021")
+allBirdsNames <- usefulFuns::substrBoth(usefulFuns::substrBoth(strng = tools::file_path_sans_ext(allBirdsPaths2011), 
+                                    howManyCharacters = 12, fromEnd = TRUE), howManyCharacters = 4, fromEnd = FALSE) 
+allBirdsPaths2100 <- grepMulti(x = allBirdsPaths, patterns = "2100")
+birds2011 <- lapply(X = 1:length(allBirdsPaths2011), FUN = function(index){
+  ras <- raster::raster(allBirdsPaths2011[[index]])
+  ras[] <- ras[]
+  names(ras) <- paste0("predicted", allBirdsNames[[index]], "2011")
+  return(ras)
+})
+birds2100 <- lapply(X = 1:length(allBirdsPaths2100), FUN = function(index){
+  ras <- raster::raster(allBirdsPaths2100[[index]])
+  ras[] <- ras[]
+  names(ras) <- paste0("predicted", allBirdsNames[[index]], "2100")
+  return(ras)
+})
+names(birds2011) <- names(birds2100) <- allBirdsNames
+
+birdPrediction <- list(Year2011 = birds2011,
+                       Year2100 = birds2100)
+
+# Caribou VERSION3: caribouOutputsFolder
+caribouPaths <- list.files(path = caribouOutputsFolder, pattern = "2011.tif|2100.tif", full.names = TRUE)
+allCaribouPaths2011 <- grepMulti(x = caribouPaths, patterns = "Year2011.tif")[1]
+allCaribouPaths2100 <- grepMulti(x = caribouPaths, patterns = "Year2100.tif")[1]
+caribous2011 <- lapply(X = 1:length(allCaribouPaths2011), FUN = function(index){
+  ras <- raster::raster(allCaribouPaths2011[[index]])
+  ras[] <- ras[]
+  names(ras) <- paste0("predictedcaribou2011")
+  return(ras)
+})
+caribous2100 <- lapply(X = 1:length(allCaribouPaths2100), FUN = function(index){
+  ras <- raster::raster(allCaribouPaths2100[[index]])
+  ras[] <- ras[]
+  names(ras) <- paste0("predictedcaribou2100")
+  return(ras)
+})
+names(caribous2011) <- names(caribous2100) <- "predictedcaribou"
+
+predictedPresenceProbability <- list(Year2011 = caribous2011,
+                                     Year2100 = caribous2100)
+#=====================================
 parameters <- list(
   priorityPlaces_DataPrep = list(
-    "stepInterval" = 99,
-    "typeOfAnalysis" = "biodiversity",
-    "weights" = data.frame(stream = c('stream3', 'stream4', 'stream5'),
-                           weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
-  ),
-  priorityPlaces = list(".useCache" = TRUE,
+    "stepInterval" = 89,
+    "typeOfAnalysis" = "biodiversity"),
+  priorityPlaces = list(".useCache" = FALSE,
+                        "stepInterval" = 89,
                         "binaryDecision" = FALSE,
                         "constraintType" = list(
                           #add_locked_in_constraints = list(locked_in = c(50, 53, 52, 51)),
@@ -60,19 +115,91 @@ parameters <- list(
                         "presolve" = 2,
                         "solutions" = 1, ## converges on a single solution already
                         #"solver" = "rsymphony", ## change accordingly
-                        "targets" = c(0.3, 0.2), ## streams 1, 2
+                        "targets" = c(0.15, 0.2), ## streams 1, 2
                         "timeLimit" = 1800,
-                        "verbose" = TRUE
+                        "verbose" = TRUE,
+                        ".plotInitialTime" = NA
   )
 )
 
-modules <- list("priorityPlaces_DataPrep", "priorityPlaces")
+modules <- list("priorityPlaces_DataPrep")
+
 inputs <- list()
 outputs <- list()
 
-objects <- list()
+objects <- list(predictedPresenceProbability = predictedPresenceProbability,
+                birdPrediction = birdPrediction)
+outputsToSave <- data.frame(objectName = rep(c("planningUnit", "featuresID")),
+                            saveTime = 2100)
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights"), create = TRUE))
+noWeights <- simInitAndSpades(times = times, params = parameters, modules = modules,
+                          objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
 
-mySim <- simInitAndSpades(times = times, params = parameters, modules = modules, objects = objects)
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105"), create = TRUE))
+parameters$priorityPlaces_DataPrep$weights <- data.table(stream = c('stream3', 'stream4', 'stream5'),
+                                                         weight = c(1.5, 1, 0.5)) ## streams 3, 4, 5
+withWeights <- simInitAndSpades(times = times, params = parameters, modules = modules,
+                          objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
+
+# No weights
+# PriorityPlaces
+objects <- list(planningUnit = readRDS(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/planningUnit_year2100.rds")),
+                featuresID = readRDS(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/featuresID_year2100.rds")))
+modules <- list("priorityPlaces")
+outputsToSave <- data.frame(objectName = "priorityAreas")
+
+# NOTE: For some reason, outputs is NOT saving a list correctly, but the simulation has it correct....
+setPaths(outputPath  = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/target15_noWeight"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.15, 0.2) ## streams 1, 2
+p_15_noW <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules), 
+                           outputs = outputsToSave)
+# _____________________
+
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/target30_noWeight"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.3, 0.2) ## streams 1, 2
+p_30_noW <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules),
+                           outputs = outputsToSave)
+
+# _____________________
+
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/noWeights/target60_noWeight"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.6, 0.2) ## streams 1, 2
+p_60_noW <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules),
+                           outputs = outputsToSave)
+# _____________________
+
+
+# Weights
+# PriorityPlaces
+objects <- list(planningUnit = readRDS(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/planningUnit_year2100.rds")),
+                featuresID = readRDS(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/featuresID_year2100.rds")))
+
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/target15_weights15105"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.15, 0.2) ## streams 1, 2
+p_15_W <- simInitAndSpades(times = times, params = parameters, modules = modules,
+                          objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
+# _____________________
+
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/target30_weights15105"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.3, 0.2) ## streams 1, 2
+p_30_W <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
+
+# _____________________
+
+setPaths(outputPath = checkPath(file.path(getwd(), "outputs/GnCReport_VERSION3/weights15105/target60_weights15105"), create = TRUE))
+parameters$priorityPlaces$targets <- c(0.6, 0.2) ## streams 1, 2
+p_60_W <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                           objects = objects, loadOrder = unlist(modules),
+                          outputs = outputsToSave)
+
 ```
 
 # Events
