@@ -32,7 +32,8 @@ defineModule(sim, list(
                           "and time are not relevant")),
     defineParameter("diversityIndex", "character", "shannon", NA, NA,
                     paste("Can also use 'simpson' (which is the inverted version, i.e. more diversity, higher",
-                          "value), but not both. The function diversityIndices can, however, deal with both of them.")),
+                          "value), but not both. The function diversityIndices can, however, deal with both of them.",
+                          "A third option is to pass 'none'. This will prepare all layers to be analysed.")),
     defineParameter("featureStreams", "numeric", 1:2, NA, NA,
                     paste("Only used for typeOfAnalysis == biodiversity.",
                           "Numeric vector of the streams that should composes the features",
@@ -52,11 +53,21 @@ defineModule(sim, list(
                            "These years should match the data ",
                            "(streams) are available")),
     defineParameter("saveMemory", "logical", TRUE, NA, NA,
-                    paste0("Should the original layers be removed once diversity is calculated?"))
+                    paste0("Should the original layers be removed once diversity is calculated?")),
+    defineParameter("collapseBirds", "logical", TRUE, NA, NA,
+                    paste0("Should the original layers of the bird group be collapsed by using sum?")),
+    defineParameter("useWaterRaster", "logical", FALSE, NA, NA,
+                    paste0("Should the feature layers use water bodies for the optimization?",
+                           " This will only happen if 1) waterRaster is supplied and ",
+                           "2) if the feature layer don't have values for water pixels ",
+                           "(water pixels are NA)"))
   ),
   inputObjects = bind_rows(
     expectsInput(objectName = "anthropogenicLayer_PP", objectClass = "RasterLayer",
                  desc = "Raster with road buffered disturbances. Can be replaced by a more complete layer",
+                 sourceURL = NA),
+    expectsInput(objectName = "speciesClassification", objectClass = "list",
+                 desc = "Only used if diversityIndex = 'none'. This is a list of 'SAR' and 'nonSAR' species",
                  sourceURL = NA),
     expectsInput(objectName = "birdPrediction", objectClass = "list",
                  desc = "List per year of the bird species predicted rasters", sourceURL = NA),
@@ -74,7 +85,12 @@ defineModule(sim, list(
                                 "index for presence of Caribous"), sourceURL = NA),
     expectsInput(objectName = "protectedAreas", objectClass = "RasterLayer | shapefile",
                  desc = paste0("Raster of protected areas, it will filter for non-na values",
-                               " (i.e. all but protected areas need to be NA"), sourceURL = NA)
+                               " (i.e. all but protected areas need to be NA"), sourceURL = NA),
+    expectsInput(objectName = "waterRaster", objectClass = "RasterLayer",
+                 desc = paste0("Raster identifying water bodies",
+                               " This raster is optional and will only be used if useWaterRaster ",
+                               "== TRUE and if the feature layer don't have values for water pixels"),
+                 sourceURL = NA)
   ),
   outputObjects = bindrows(
     createsOutput(objectName = "featuresID", objectClass = "rasterStack",
@@ -122,35 +138,36 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
     eventType,
     init = {
       # 1. Check that birdPrediction and predictedPresenceProbability stack.
-      # If not, postProcess one of these ( [ FIX ] to be added later)
-      # TODO
-      tryCatch({
-        stkBirs <- raster::stack(unlist(sim$birdPrediction))
-        stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
-        stk <- stack(stkBirs, stkBoo)
+      # If not, postProcess one of these
+if (all(!is.na(sim$birdPrediction))){
+  tryCatch({
+    stkBirs <- raster::stack(unlist(sim$birdPrediction))
+    stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
+    stk <- stack(stkBirs, stkBoo)
 
-      }, error = function(e) {
-        message(crayon::red("sim$birdPrediction and sim$predictedPresenceProbability do not align.",
-                            "Will attempt postProcessing caribou layers using bird layers as RTM."))
-        booPrediction <- lapply(names(sim$predictedPresenceProbability), function(year) {
-          booPrediction <- lapply(names(sim$predictedPresenceProbability[[year]]), function(TYPE) {
-            booPrediction <- Cache(postProcess, x = sim$predictedPresenceProbability[[year]][[TYPE]],
-                                   destinationPath = dataPath(sim),
-                                   rasterToMatch = sim$birdPrediction[[1]][[1]])
-          })
-          names(booPrediction) <- names(sim$predictedPresenceProbability[[year]])
-          return(booPrediction)
-        })
-        names(booPrediction) <- names(sim$predictedPresenceProbability)
-        sim$predictedPresenceProbability <- booPrediction
+  }, error = function(e) {
+    message(crayon::red("sim$birdPrediction and sim$predictedPresenceProbability do not align.",
+                        "Will attempt postProcessing caribou layers using bird layers as RTM."))
+    booPrediction <- lapply(names(sim$predictedPresenceProbability), function(year) {
+      booPrediction <- lapply(names(sim$predictedPresenceProbability[[year]]), function(TYPE) {
+        booPrediction <- Cache(postProcess, x = sim$predictedPresenceProbability[[year]][[TYPE]],
+                               destinationPath = dataPath(sim),
+                               rasterToMatch = sim$birdPrediction[[1]][[1]])
       })
-      tryCatch({
-        stkBirs <- raster::stack(unlist(sim$birdPrediction))
-        stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
-        stk <- stack(stkBirs, stkBoo)
-      }, error = function(e){
-        stop("postProcessing did not work for your layers. Please debug")
-      })
+      names(booPrediction) <- names(sim$predictedPresenceProbability[[year]])
+      return(booPrediction)
+    })
+    names(booPrediction) <- names(sim$predictedPresenceProbability)
+    sim$predictedPresenceProbability <- booPrediction
+  })
+  tryCatch({
+    stkBirs <- raster::stack(unlist(sim$birdPrediction))
+    stkBoo <- stack(unlist(lapply(sim$predictedPresenceProbability, function(x) head(x, 1))))
+    stk <- stack(stkBirs, stkBoo)
+  }, error = function(e){
+    stop("postProcessing did not work for your layers. Please debug")
+  })
+}
       # 2. Get the importantAreas and protectedAreas.
       # If raster, postProcess if it doesn't stack with the other layers: predictedPresenceProbability
       if (!is.null(sim$importantAreas)){
@@ -174,20 +191,33 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         sim$stream4 <- sim$stream5 <- sim$featuresID <- list()
 
       # Assertion:
-      if (length(P(sim)$diversityIndex) < 1)
-        stop("You have to provide at least one index to be calculated:
-             'shannon', 'simpson' (i.e. simpson is the inverted version)")
+      if (any(length(P(sim)$diversityIndex) < 1, length(P(sim)$diversityIndex) > 1)){
+        stop("You have to provide one index to be calculated:
+             'shannon', 'simpson' (i.e. simpson is the inverted version) or 'none'
+             (i.e. for analysing all layers together)")
+      }
 
       # Create counter
       mod$.schedulingCounter <- 1
 
+      # Check for waterRaster if P(sim)$useWaterRaster) == TRUE
+      if (P(sim)$useWaterRaster){
+        if (is.null(sim$waterRaster))
+          stop("The parameter 'useWaterRaster' is TRUE but the object waterRaster was not provided.")
+      }
+
       # schedule future event(s)
-      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
-                           "priorityPlaces_DataPrep", "assignStream", eventPriority = .first())
-      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
-                           "priorityPlaces_DataPrep", "prepStreamStack", eventPriority = .first())
-      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
-                           "priorityPlaces_DataPrep", "calculateStreamDiversity", eventPriority = .first())
+      if (P(sim)$diversityIndex != 'none'){
+        sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                             "priorityPlaces_DataPrep", "assignStream", eventPriority = .first())
+        sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                             "priorityPlaces_DataPrep", "prepStreamStack", eventPriority = .first())
+        sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                             "priorityPlaces_DataPrep", "calculateStreamDiversity", eventPriority = .first())
+      } else {
+        sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
+                             "priorityPlaces_DataPrep", "prepareSpeciesStack", eventPriority = .first())
+      }
       sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter]),
                            "priorityPlaces_DataPrep", "addMissingStreams", eventPriority = .first())
       if (any(P(sim)$normalizeRasters, P(sim)$typeOfAnalysis == "biodiversity"))
@@ -262,7 +292,6 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
         stream4 = sim$stream4[[paste0("Year", time(sim))]],
         stream5 = sim$stream5[[paste0("Year", time(sim))]]
       )
-
       sim$speciesStreamsList[[paste0("Year", time(sim))]] <- sim$speciesStreamsList[[paste0("Year", time(sim))]][
         lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY
 
@@ -271,6 +300,8 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
                            "priorityPlaces_DataPrep", "prepStreamStack")
     },
     calculateStreamDiversity = {
+      # If the diversityIndex is shannon
+      # diversityIndex
 
       # 2. For the specific year, calculate stream diversity
       sim$latestYearsDiversity <- lapply(names(sim$speciesStreamsList[[paste0("Year", time(sim))]]), function(stream) {
@@ -292,7 +323,42 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
       sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter + 1]),
                            "priorityPlaces_DataPrep", "calculateStreamDiversity")
     },
+    prepareSpeciesStack = {
+      if (all(!is.na(sim$birdPrediction))){
+        # 2. For the specific year, grab all the birds layers and assign them to a list of streams
+        thisYearsBirds <- sim$birdPrediction[[paste0("Year", time(sim))]]
+        birdSpecies <- names(thisYearsBirds)
+        lapply(birdSpecies, function(BIRD){
+          birdRas <- thisYearsBirds[[BIRD]]
+          # SAR SPECIES
+          if (BIRD %in% sim$speciesClassification[["SAR"]]){
+            birdRas <- list(birdRas)
+            names(birdRas) <- BIRD
+            sim$stream2[[paste0("Year", time(sim))]] <- c(sim$stream2[[paste0("Year", time(sim))]], birdRas)
+          } else {
+            if (BIRD %in% sim$speciesClassification[["nonSAR"]]){
+              birdRas <- list(birdRas)
+              names(birdRas) <- BIRD
+              sim$stream3[[paste0("Year", time(sim))]] <- c(sim$stream3[[paste0("Year", time(sim))]], birdRas)
+            }
+          }
+        })
+      }
+      sim$speciesStreamsList[[paste0("Year", time(sim))]] <- sim$speciesStreamsList[[paste0("Year", time(sim))]][
+        lengths(sim$speciesStreamsList[[paste0("Year", time(sim))]]) != 0] # TO REMOVE THE EMPTY LISTS AFTERWARDS IF ANY
+  if (P(sim)$collapseBirds){
+    tic(paste0("Collapsing birs layers for ", paste(birdSpecies, collapse = ", "), " took: "))
+      sim$stream2[[paste0("Year", time(sim))]] <- raster::calc(raster::stack(sim$stream2[[paste0("Year", time(sim))]]),
+                                                             fun = sum, format = "GTiff")
+      names(sim$stream2[[paste0("Year", time(sim))]]) <- "stream2"
+      toc()
+  }
+      # Schedule future events
+      sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter + 1]),
+                           "priorityPlaces_DataPrep", "prepareSpeciesStack")
+    },
     addMissingStreams = {
+      maxStream <- if (P(sim)$diversityIndex != 'none') 5 else 3
       # 3. For the specific year, add the missing stream 1 (i.e. caribou)
       thisYearCaribou <- sim$predictedPresenceProbability[[paste0("Year", time(sim))]]
       caribouRSFuncertain <- grepMulti(names(thisYearCaribou), patterns = "Uncertain")
@@ -307,10 +373,19 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
              "adjust the parameter 'stepInterval'"))
       }
       names(sim$stream1[[paste0("Year", time(sim))]]) <- c(nms, "stream1")
-      sim$latestYearsDiversity <- c(sim$stream1[[paste0("Year", time(sim))]], sim$latestYearsDiversity)
+      if (maxStream == 5){
+        sim$latestYearsDiversity <- c(sim$stream1[[paste0("Year", time(sim))]], sim$latestYearsDiversity)
+      } else {
+        sim$speciesStreamsList[[paste0("Year", time(sim))]] <- list(
+          stream1 = sim$stream1[[paste0("Year", time(sim))]],
+          stream2 = sim$stream2[[paste0("Year", time(sim))]],
+          stream3 = sim$stream3[[paste0("Year", time(sim))]]
+        )
+        sim$latestYearsDiversity <- sim$speciesStreamsList[[paste0("Year", time(sim))]] # Only to keep consistent code
+      }
       # Then check for missing streams
-      missingStreams <- setdiff(paste0("stream", 1:5), names(sim$latestYearsDiversity))
-      if (!is.null(missingStreams)) {
+      missingStreams <- setdiff(paste0("stream", 1:maxStream), names(sim$latestYearsDiversity))
+      if (length(missingStreams) != 0) {
         missingRas <- lapply(missingStreams, function(mssStr) {
           zeroedRas <- raster::setValues(sim$stream1[[paste0("Year", time(sim))]][[1]], 0)
           message("Making zeroed layer, Cached object is fine here")
@@ -325,13 +400,26 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           return(ras)
         })
         names(missingRas) <- missingStreams
+      } else {
+        # Create missing ras if doesn't exist
+        missingRas <- NULL
       }
-      # Here I expect to have all stream layers, from 1 to 5.
+      # Here I expect to have all stream layers, from 1 to maxStream.
       # If there is one I don't have originally, it should be here as zero
-      nm <- c(names(sim$latestYearsDiversity), names(missingRas))
+      if (maxStream == 5){
+        nm <- c(names(sim$latestYearsDiversity), names(missingRas))
+      } else {
+        # Need to give the correct names for the layers
+        nm <- as.character(unlist(lapply(sim$latestYearsDiversity, names)))
+
+      }
       stk <- raster::stack(c(unlist(sim$latestYearsDiversity), missingRas))
       names(stk) <- nm
-      matched <- match(paste0("stream", 1:5), names(stk))
+      if (maxStream == 5){
+        matched <- match(paste0("stream", 1:maxStream), names(stk))
+      } else {
+        matched <- nm
+      }
       if (P(sim)$typeOfAnalysis == "standard") {
         sim$featuresID[[paste0("Year", time(sim))]] <- raster::subset(stk, matched)
       } else {
@@ -410,8 +498,7 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
           stop("Weight needs to be provided as a data.table")
         }
         addUnchangingStream <- setdiff(names(sim$featuresID[[paste0("Year", time(sim))]]), names(normalized))
-        sim$featuresID[[paste0("Year", time(sim))]] <- raster::stack(sim$featuresID[[paste0("Year", time(sim))]][[addUnchangingStream]],
-                                                                     normalized)
+        sim$featuresID[[paste0("Year", time(sim))]] <- raster::stack(sim$featuresID[[paste0("Year", time(sim))]][[addUnchangingStream]], normalized)
         # Schedule future events
       sim <- scheduleEvent(sim, dyears(P(sim)$predictionYears[mod$.schedulingCounter + 1]),
                            "priorityPlaces_DataPrep", "updateFeatureWeights")
@@ -450,7 +537,22 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
                                    paste(P(sim)$removeLayers, collapse = "; "))))
         sim$featuresID[[paste0("Year", time(sim))]] <- raster::dropLayer(x = sim$featuresID[[paste0("Year", time(sim))]],
                                                                          i = P(sim)$removeLayers)
+        # Now we clean layers for really low values
+        sim$featuresID[[paste0("Year", time(sim))]] <- cleanLayers(sim$featuresID[[paste0("Year", time(sim))]])
       }
+      if (P(sim)$useWaterRaster){
+        allWaterBodiesAreNA <- any(is.na(sim$featuresID[[paste0("Year", time(sim))]][sim$waterRaster == 1]))
+        if (allWaterBodiesAreNA){
+          message(crayon::yellow(paste0("useWaterRaster is TRUE, setting all water bodies to 0")))
+          for (i in 1:nlayers(sim$featuresID[[paste0("Year", time(sim))]])){
+            sim$featuresID[[paste0("Year", time(sim))]][[i]][sim$waterRaster == 1] <- 0
+          }
+        } else {
+          message(crayon::red(paste0("useWaterRaster is TRUE but water bodies are not NA. Ignoring parameter.")))
+        }
+      }
+      message(crayon::yellow(paste0("sim$featuresID for year ", time(sim), " for ", sim$experimentName, " has ",
+                                    raster::nlayers(sim$featuresID[[paste0("Year", time(sim))]]), " layers")))
 
       # Schedule future events
       sim <- scheduleEvent(sim, time(sim) + P(sim)$stepInterval, "priorityPlaces_DataPrep", "cleanHomogenousFeatures")
@@ -533,6 +635,19 @@ doEvent.priorityPlaces_DataPrep = function(sim, eventTime, eventType) {
 
   if (!suppliedElsewhere("anthropogenicLayer_PP", sim)){
     sim$anthropogenicLayer_PP <- NA
+  }
+
+  if (!suppliedElsewhere("speciesClassification", sim)){
+    sim$speciesClassification <- list(nonSAR = c("ALFL", "AMCR", "AMRE", "AMRO", "ATSP", "BAWW",
+                                                 "BBWA", "BBWO", "BCCH", "BHCO", "BHVI", "BLPW", "BOCH", "BRBL",
+                                                 "BRCR", "BTNW", "CCSP", "CHSP", "CORA", "COYE", "DEJU", "EAKI",
+                                                 "FOSP", "GRAJ", "HAFL", "HETH", "HOLA", "LCSP", "LEFL", "LISP",
+                                                 "MAWA", "NOFL", "NOWA", "OCWA", "OVEN", "PAWA", "PHVI", "PISI",
+                                                 "PIWO", "PUFI", "RBGR", "RBNU", "RCKI", "REVI", "RUBL", "RUGR",
+                                                 "RWBL", "SAVS", "SOSP", "SWSP", "SWTH", "TEWA", "TRES", "VATH",
+                                                 "WAVI", "WCSP", "WETA", "WEWP", "WIWA", "WIWR", "WTSP", "WWCR",
+                                                 "YBFL", "YBSA", "YEWA", "YRWA"),
+                                      SAR = "CAWA")
   }
 
   cacheTags <- c(currentModule(sim), "function:.inputObjects")
